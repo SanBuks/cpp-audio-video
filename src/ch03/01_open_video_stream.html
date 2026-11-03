@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>打开摄像头</title>
+</head>
+<body>
+    <video id="local-video" autoplay playsinline></video>
+    <button id="showVideo"> 打开摄像头 </button>
+</body>
+
+<style>
+    #local-video { width: 480px; height: 360px; background: #000; }
+</style>
+
+<script>
+    // # 4. 显示 音频/视频 配置
+    const constraints = {
+        audio: false,
+        video: true
+    }
+
+    // # 1. 处理回调 把 stream 赋给 video 控件的 srcObject 属性
+    function handleSuccess(stream) {
+        const video = document.querySelector("#local-video");
+        video.srcObject = stream;
+    }
+
+    // # 2. 失败回调
+    function handleFail(error) {
+        console.error("打开摄像头失败：", error);
+    }
+
+    // # 3. 打开事件
+    function onOpenCamera(e) {
+        navigator.mediaDevices
+            .enumerateDevices()
+            .then(devices => {
+          console.log("设备数量:", devices.length);
+          console.log(devices);
+        });
+        navigator.mediaDevices
+            .getUserMedia(constraints)
+            .then(handleSuccess)
+            .catch(handleFail);
+    }
+
+    document.querySelector("#showVideo").addEventListener("click", onOpenCamera);
+</script>
+</html>

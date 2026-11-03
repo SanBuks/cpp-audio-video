@@ -1,3 +1,12 @@
+raw/
+.idea/
+
+# Js
+node_modules
+dist
+.DS_Store
+*.local
+
 # Prerequisites
 *.d
 

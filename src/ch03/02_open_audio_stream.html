@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>打开麦克风</title>
+</head>
+<body>
+    <audio id="local-audio" autoplay controls></audio>
+    <button id="showAudio"> 打开麦克风 </button>
+</body>
+
+<style>
+    /*#local-audio { width: 480px; height: 360px; background: #000; }*/
+</style>
+
+<script>
+    const constraints = {
+        audio: true,
+        video: false
+    }
+
+    function handleSuccess(stream) {
+        const audio = document.querySelector("#local-audio");
+        audio.srcObject = stream;
+    }
+
+    function handleFail(error) {
+        console.error("打开摄像头失败：", error);
+    }
+
+    function onOpenMicrophone(e) {
+        navigator.mediaDevices.enumerateDevices().then(devices => {
+          console.log("设备数量:", devices.length);
+          console.log(devices);
+        });
+        navigator.mediaDevices
+            .getUserMedia(constraints)
+            .then(handleSuccess)
+            .catch(handleFail);
+    }
+
+    document.querySelector("#showAudio").addEventListener("click",  onOpenMicrophone);
+</script>
+</html>
