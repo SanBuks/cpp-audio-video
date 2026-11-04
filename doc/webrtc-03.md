@@ -2,7 +2,7 @@
 - `navigator.mediaDevices.getUserMedia(constraints)`
 - 在用户授权后从摄像头, 麦克风等设备采集媒体, 返回一个 MediaStream 对象, 包含视轨和音轨
 - 返回一个 Promise, 调用后会触发浏览器的权限请求弹窗, 只有用户明确允许, Promise 才会成功解析
- 
+
 # 配置
 - constraints 参数是一个 MediaStreamConstraints 对象, 核心成员是 video 和 audio, 至少指定其中一个
 ```js
@@ -51,7 +51,7 @@ const c2 = {                             // 更详细的配置
   - src  媒体资源 URL(但 WebRTC 场景更常用 srcObject)
 - 状态属性
   - paused(只读), ended(只读)
-  - currentTime:当前播放位置(秒), 可写, 可用于 seek
+  - currentTime: 当前播放位置(秒), 可写, 可用于 seek
   - duration(只读): 总时长
   - volume, muted
   - playbackRate: 播放速率

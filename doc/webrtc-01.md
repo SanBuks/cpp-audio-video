@@ -97,8 +97,10 @@
 - TURN 服务器缺点 
   - 按照单向数据 200kbps 为一对一通话标准, 一对连接需要 200kbps * 4 贷款
 - 开源项目
-  - coturn 开源项目集成了 STUN 和 TURN的功能
-  - ICE, ICE 不是一种协议, 而是一个框架, 它整合了 STUN 和 TURN
+  - coturn 开源项目集成了 STUN 和 TURN 的功能
+  - ICE(Interactive Connectivity Establishment, 交互式连接建立) 
+    - ICE 不是一种协议, 而是一个框架
+    - 包含了收集地址(调用 STUN/TURN), 交换地址(通过信令), 连通性检查(发Ping打洞), 最终建立连接的一整套完整机制
 - 术语
   - WebRTC 媒体协商: SDP 编解码类型
   - WebRTC 网络协商: Candidate 描述网络信息
@@ -139,7 +141,7 @@
   - 当对方的媒体流到达时, 会触发相应事件 onAddStream
   - 如果打洞失败, 则会借用 TURN 服务器 转发双方媒体流实现 P2P 
 
-![](img/webrtc/05-p2p-procedure.png)
+![](img/webrtc/05-p2p-procedure-1.png)
 
 ## NAT 补充
 - P2P技术详解(一)：NAT详解——详细原理、P2P简介 https://www.cnblogs.com/mlgjb/p/8243646.htm 
