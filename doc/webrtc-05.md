@@ -147,10 +147,21 @@ pc.onconnectionstatechange = function(event) {
 ```
 
 # 开发步骤
-- 客户端显示界面
-- 打开摄像头并显示到页面
-- websocket连接 
-- join, new-peer, resp-join 信令实现 
-- leave、peer-leave信令实现 
-- offer、answer、candidate信令实现 
+## 客户端显示界面
+## 打开摄像头并显示到页面
+## websocket连接 
+## join, new-peer, resp-join 信令实现 
+## leave、peer-leave信令实现 
+## offer、answer、candidate信令实现 
+ 1）收到new-peer （handleRemoteNewPeer处理），作为发起者创建RTCPeerConnection，绑定事件响应函数， 加入本地流；
+（2）创建offer sdp，设置本地sdp，并将offer sdp发送到服务器；
+（3）服务器收到offer sdp 转发给指定的remoteClient；
+（4）接收者收到offer，也创建RTCPeerConnection，绑定事件响应函数，加入本地流；
+（5）接收者设置远程sdp，并创建answer sdp，然后设置本地sdp并将answer sdp发送到服务器；
+（6）服务器收到answer sdp 转发给指定的remoteClient；
+（7）发起者收到answer sdp，则设置远程sdp；
+（8）发起者和接收者都收到ontrack回调事件，获取到对方码流的对象句柄；
+（9）发起者和接收者都开始请求打洞，通过onIceCandidate获取到打洞信息（candidate）并发送给对方
+（10）如果P2P能成功则进行P2P通话，如果P2P不成功则进行中继转发通话。
+
 - 综合调试和完善

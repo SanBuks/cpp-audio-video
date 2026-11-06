@@ -9,16 +9,34 @@ const SIGNAL_TYPE_CANDIDATE = "candidate";    // 发送 candidate 给对端 peer
 
 export class WebRTCEngine {
 
-    wsUrl: string;
-    signaling: WebSocket | null;
-    localUserId: string | null;    // 本地用户 ID
-    remoteUserId: string | null;   // 对端用户 ID
+    wsUrl: string;                     // ws 地址
+    signaling: WebSocket | null;       // ws
+    roomId: string | null;             // 房间号
 
-    constructor(wsUrl: string) {
+    localUserId: string | null;        // 本地用户 ID
+    localVideo: any | null;            // 本地视频控件
+    localStream: MediaStream | null;   // 本地流
+
+    remoteUserId: string | null;       // 对端用户 ID
+    remoteVideo: any | null;           // 对端视频控件
+    remoteStream: MediaStream | null;  // 远程流
+
+    pc: RTCPeerConnection | null;      // RtcPeerConnection
+
+    constructor(wsUrl: string, localVideo: any, remoteVideo: any) {
         this.wsUrl = wsUrl;
+        this.roomId = null;
         this.signaling = null;
+
         this.localUserId = Math.random().toString(36).substring(2);
+        this.localVideo = localVideo;
+        this.localStream = null;
+
         this.remoteUserId = null;
+        this.remoteVideo = remoteVideo;
+        this.remoteStream = null;
+
+        this.pc = null;
     }
 
     createWebsocket(): void {
@@ -37,10 +55,22 @@ export class WebRTCEngine {
         let jsonMsg = JSON.parse(event.data)
         switch(jsonMsg.cmd) {
             case SIGNAL_TYPE_NEW_PEER:
-                this.handleRemoteNewPeer(jsonMsg)
+                this.handleRemoteNewPeer(jsonMsg);
                 break;
             case SIGNAL_TYPE_RESP_JOIN:
-                this.handleRemoteRespJoin(jsonMsg)
+                this.handleRemoteRespJoin(jsonMsg);
+                break;
+            case SIGNAL_TYPE_PEER_LEAVE:
+                this.handlePeerLeave(jsonMsg);
+                break;
+            case SIGNAL_TYPE_OFFER:
+                this.handleRemoteOffer(jsonMsg);
+                break;
+            case SIGNAL_TYPE_ANSWER:
+                this.handleRemoteAnswer(jsonMsg);
+                break;
+            case SIGNAL_TYPE_CANDIDATE:
+                this.handleRemoteCandidate(jsonMsg);
                 break;
             default:
                 break;
@@ -53,14 +83,63 @@ export class WebRTCEngine {
         console.log("onClose -> code: " + event.code + ", reason:" + event.reason);
     }
 
-
-    // 通用传递数据工具函数
-    private sendMsg(msg: string) {
+    // 工具函数 传递数据
+    private sendMsg(msg: string): void {
         if (this.signaling === null) {
             console.error('信令服务器 ws 连接未建立!')
         } else {
             this.signaling.send(msg);
         }
+    }
+
+    // 工具函数 创建连接对象
+    private createPeerConnection() {
+        console.log('create PeerConnection');
+        this.pc = new RTCPeerConnection();
+        this.pc.onicecandidate = this.handleIceCandidate.bind(this);
+        this.pc.ontrack = this.handleRemoteStreamAdd.bind(this);
+        this.localStream?.getTracks().forEach((track:any) => this.pc?.addTrack(track, this.localStream!));
+    }
+
+    createOfferAndSendMessage(session: any) {
+        this.pc?.setLocalDescription(session)
+                .then(() => {
+                    let offerMsg = {
+                        'cmd': SIGNAL_TYPE_OFFER,
+                        'roomId': this.roomId,
+                        'uid': this.localUserId,
+                        'remoteUid': this.remoteUserId,
+                        'msg': JSON.stringify(session)
+                    };
+                    let offerMsgStr = JSON.stringify(offerMsg)
+                    this.sendMsg(offerMsgStr);
+                    console.info(`${SIGNAL_TYPE_OFFER} msg: ${offerMsgStr}`)
+                }).catch((err)=>{
+                    console.error(`setLocalDescription error: ${err}`)
+                })
+    }
+
+    createAnswerAndSendMessage(session: any) {
+        this.pc?.setLocalDescription(session)
+                .then(() => {
+                    let answerMsg = {
+                      'cmd': SIGNAL_TYPE_ANSWER,
+                      'roomId': this.roomId,
+                      'uid': this.localUserId,
+                      'remoteUid':this.remoteUserId,
+                      'msg': JSON.stringify(session)
+                    };
+                    let answerMsgStr = JSON.stringify(answerMsg)
+                    this.sendMsg(answerMsgStr);
+                    console.info(`${SIGNAL_TYPE_ANSWER} msg: ${answerMsgStr}`)
+                }).catch((err)=>{
+                    console.error(`setLocalDescription error: ${err}`)
+                })
+    }
+
+    // 设置本地流, 必须在创建 PeerConnection 之前调用
+    setLocalStream(stream: MediaStream): void {
+        this.localStream = stream;
     }
 
     // 加入房间
@@ -70,18 +149,98 @@ export class WebRTCEngine {
           'roomId': roomId,
           'uid': this.localUserId,
         };
+        this.roomId = roomId;
         let msg = JSON.stringify(joinMsg);
         this.sendMsg(msg);
-        console.log(`doJoin msg : ${msg}`)
+        console.log(`doJoin msg: ${msg}`)
+    }
+    // 离开房间
+    doLeave(roomId: string) {
+        let leaveMsg = {
+          'cmd': 'leave',
+          'roomId': roomId,
+          'uid': this.localUserId,
+        };
+        let msg = JSON.stringify(leaveMsg)
+        this.sendMsg(msg)
+        console.log(`doLeave msg: ${msg}`)
+    }
+    // 创建 offer
+    doOffer() {
+        if (this.pc == null) {
+            this.createPeerConnection()
+        }
+        this.pc!.createOffer()
+                .then(this.createOfferAndSendMessage.bind(this))
+                .catch((err) => console.error(`createOffer error : ${err}`))
+    }
+    // 回应
+    doAnswer() {
+        this.pc!.createAnswer()
+                .then(this.createAnswerAndSendMessage.bind(this))
+                .catch((err) => console.error(`createAnswer error : ${err}`))
     }
 
     handleRemoteNewPeer(jsonMsg: any) {
-        console.info(`handleRemoteNewPeer remoteUid: ${jsonMsg.remoteUid}`)
-        this.remoteUserId = jsonMsg.remoteUid
+        console.info(`handleRemoteNewPeer remoteUid: ${jsonMsg.remoteUid}`);
+        this.remoteUserId = jsonMsg.remoteUid;
+        this.doOffer();
     }
     handleRemoteRespJoin(jsonMsg: any) {
         console.info(`handleRemoteRespJoin remoteUid: ${jsonMsg.remoteUid}`)
         this.remoteUserId = jsonMsg.remoteUid
-        // doOffer
+    }
+    handlePeerLeave(jsonMsg: any) {
+        console.info(`handlePeerLeave remoteUid: ${jsonMsg.remoteUid}`)
+        this.remoteVideo.srcObject = null
+        this.remoteUserId = null
+    }
+    handleRemoteOffer(jsonMsg: any) {
+        console.info(`handleRemoteOffer remoteUid: ${jsonMsg.remoteUid}`)
+        if (this.pc == null) {
+            this.createPeerConnection();
+        }
+        let desc = JSON.parse(jsonMsg.msg);
+        this.pc!.setRemoteDescription(desc)
+                .then(() => this.doAnswer())
+                .catch((err)=>console.error(`setRemoteDescription error ${err}`));
+
+    }
+    handleRemoteAnswer(jsonMsg: any) {
+        console.info(`handleRemoteAnswer remoteUid: ${jsonMsg.remoteUid}`)
+        let desc = JSON.parse(jsonMsg.msg);
+        this.pc!.setRemoteDescription(desc).catch(err => console.error(`setRemoteDescription error ${err}`));
+    }
+    handleRemoteCandidate(jsonMsg: any) {
+        console.info(`handleRemoteCandidate remoteUid: ${jsonMsg.remoteUid}`)
+        let candidate = JSON.parse(jsonMsg.msg)
+        this.pc!.addIceCandidate(candidate).catch(err => console.error(`addIceCandidate error ${err}`));
+    }
+
+    handleIceCandidate(event: RTCPeerConnectionIceEvent) {
+        console.info(`handleIceCandidate`)
+        if (!event.candidate) {
+            console.warn('End of candidate')
+            return;
+        }
+        let candidateMsg = {
+          'cmd': SIGNAL_TYPE_CANDIDATE,
+          'roomId': this.roomId,
+          'uid': this.localUserId,
+          'remoteUid': this.remoteUserId,
+          'msg': JSON.stringify(event.candidate)
+        }
+        let message = JSON.stringify(candidateMsg);
+        this.sendMsg(message);
+        console.info(`${ SIGNAL_TYPE_CANDIDATE}: ${message}`)
+    }
+    handleRemoteStreamAdd(event: RTCTrackEvent) {
+        console.info(`handleRemoteStreamAdd`)
+        if (!event.streams[0]) {
+            console.warn(`handleRemoteStreamAdd event stream[0] is null!`);
+            return;
+        }
+        this.remoteStream = event.streams[0]
+        this.remoteVideo.srcObject = this.remoteStream
     }
 }
