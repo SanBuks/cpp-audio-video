@@ -10,20 +10,20 @@ const SIGNAL_TYPE_CANDIDATE = "candidate";    // 发送 candidate 给对端 peer
 export class WebRTCEngine {
 
     wsUrl: string;                     // ws 地址
-    signaling: WebSocket | null;       // ws
-    roomId: string | null;             // 房间号
+    signaling: WebSocket | null;       // ws 连接
+    roomId: string | null;             // 房间 ID
 
-    localUserId: string | null;        // 本地用户 ID
-    localVideo: any | null;            // 本地视频控件
-    localStream: MediaStream | null;   // 本地流
-
-    remoteUserId: string | null;       // 对端用户 ID
-    remoteVideo: any | null;           // 对端视频控件
-    remoteStream: MediaStream | null;  // 远程流
+    localUserId: string | null;            // 本地用户 ID
+    localVideo: HTMLVideoElement;   // 本地视频控件
+    localStream: MediaStream | null;       // 本地流
+    remoteUserId: string | null;           // 对端用户 ID
+    remoteVideo: HTMLVideoElement;  // 对端视频控件
+    remoteStream: MediaStream | null;      // 远程流
 
     pc: RTCPeerConnection | null;      // RtcPeerConnection
+    conf: RTCConfiguration | null;            // RtcPeerConnection 配置
 
-    constructor(wsUrl: string, localVideo: any, remoteVideo: any) {
+    constructor(wsUrl: string, localVideo: HTMLVideoElement, remoteVideo: HTMLVideoElement) {
         this.wsUrl = wsUrl;
         this.roomId = null;
         this.signaling = null;
@@ -37,6 +37,7 @@ export class WebRTCEngine {
         this.remoteStream = null;
 
         this.pc = null;
+        this.conf = null;
     }
 
     createWebsocket(): void {
@@ -95,13 +96,41 @@ export class WebRTCEngine {
     // 工具函数 创建连接对象
     private createPeerConnection() {
         console.log('create PeerConnection');
-        this.pc = new RTCPeerConnection();
+
+        this.conf = {
+            bundlePolicy: "max-bundle",
+            rtcpMuxPolicy: "require",
+            iceTransportPolicy: "relay",  // relay 或者 all
+            // 修改 ice 数组测试效果, 需要进行封装
+            iceServers: [
+                {
+                    "urls": [
+                        "turn:192.168.10.113:3478?transport=udp",
+                        "turn:192.168.10.113:3478?transport=tcp"       // 可以插入多个进行备选
+                    ],
+                    "username": "lqf",
+                    "credential": "123456"
+                },
+                {
+                    "urls": [
+                        "stun:192.168.10.113:3478"
+
+                    ]
+                }
+            ]
+        };
+
+        this.pc = new RTCPeerConnection(this.conf);
         this.pc.onicecandidate = this.handleIceCandidate.bind(this);
         this.pc.ontrack = this.handleRemoteStreamAdd.bind(this);
-        this.localStream?.getTracks().forEach((track:any) => this.pc?.addTrack(track, this.localStream!));
+        this.localStream!.getTracks()
+            .forEach(
+                (track: MediaStreamTrack) =>
+                this.pc!.addTrack(track, this.localStream!)
+            );
     }
 
-    createOfferAndSendMessage(session: any) {
+    setLocalDescAndSendOfferMessage(session: RTCLocalSessionDescriptionInit) {
         this.pc?.setLocalDescription(session)
                 .then(() => {
                     let offerMsg = {
@@ -119,7 +148,7 @@ export class WebRTCEngine {
                 })
     }
 
-    createAnswerAndSendMessage(session: any) {
+    setLocalDescAndSendAnswerMessage(session: RTCLocalSessionDescriptionInit) {
         this.pc?.setLocalDescription(session)
                 .then(() => {
                     let answerMsg = {
@@ -137,9 +166,10 @@ export class WebRTCEngine {
                 })
     }
 
-    // 设置本地流, 必须在创建 PeerConnection 之前调用
-    setLocalStream(stream: MediaStream): void {
+    // 设置本地流并打开, 在创建 PeerConnection 之前调用
+    openLocalStream(stream: MediaStream): void {
         this.localStream = stream;
+        this.localVideo.srcObject = stream;
     }
 
     // 加入房间
@@ -157,13 +187,14 @@ export class WebRTCEngine {
     // 离开房间
     doLeave(roomId: string) {
         let leaveMsg = {
-          'cmd': 'leave',
+          'cmd': SIGNAL_TYPE_LEAVE,
           'roomId': roomId,
           'uid': this.localUserId,
         };
         let msg = JSON.stringify(leaveMsg)
         this.sendMsg(msg)
         console.log(`doLeave msg: ${msg}`)
+        this.doHangUp();
     }
     // 创建 offer
     doOffer() {
@@ -171,14 +202,27 @@ export class WebRTCEngine {
             this.createPeerConnection()
         }
         this.pc!.createOffer()
-                .then(this.createOfferAndSendMessage.bind(this))
+                .then(this.setLocalDescAndSendOfferMessage.bind(this))
                 .catch((err) => console.error(`createOffer error : ${err}`))
     }
     // 回应
     doAnswer() {
         this.pc!.createAnswer()
-                .then(this.createAnswerAndSendMessage.bind(this))
+                .then(this.setLocalDescAndSendAnswerMessage.bind(this))
                 .catch((err) => console.error(`createAnswer error : ${err}`))
+    }
+    // 挂断
+    doHangUp() {
+        // 控件关闭
+        this.localVideo.srcObject = null;
+        this.remoteVideo.srcObject = null;
+        // pc 连接关闭
+        if (this.pc) {
+            this.pc.close();
+            this.pc = null;
+        }
+        // 流关闭
+        this.localStream?.getTracks().forEach((track: MediaStreamTrack) => track.stop());
     }
 
     handleRemoteNewPeer(jsonMsg: any) {
@@ -194,6 +238,11 @@ export class WebRTCEngine {
         console.info(`handlePeerLeave remoteUid: ${jsonMsg.remoteUid}`)
         this.remoteVideo.srcObject = null
         this.remoteUserId = null
+        // pc 连接关闭
+        if (this.pc) {
+            this.pc.close();
+            this.pc = null;
+        }
     }
     handleRemoteOffer(jsonMsg: any) {
         console.info(`handleRemoteOffer remoteUid: ${jsonMsg.remoteUid}`)

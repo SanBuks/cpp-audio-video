@@ -1,7 +1,7 @@
 # 1.0 WebRTC 课程介绍
-- P2P COTURN 中继服务器
-- 建议局域网中采用 relay 模式，及时暴露连接问题
-- `iceTransportPolicy: "relay"`
+- P2P, COTURN 中继服务器
+- 建议局域网中采用 COTURN relay 模式, 及时暴露连接问题
+  - `iceTransportPolicy: "relay"`
 
 # 1.1 什么是 WebRTC
 - WebRTC(Web Real Time Communication)是 Google 于 2010 从 Global IP Solutions 公司购买, 并于 2011 年将其开源
@@ -19,31 +19,33 @@
 
 ## 结构介绍
 - Your Web App 
-  - Web 开发者开发的程序，Web开发者可以基于集成WebRTC的浏览器提供的web API开发基于视频、音频的实时通信应用。
+  - Web 开发者开发的程序, Web 开发者可以基于集成 WebRTC 的浏览器提供的 Web API 开发基于音视频的实时通信应用
 - Web API 
-  - 面向第三方开发者的WebRTC标准API（Javascript），使开发者能够容易地开发出类似于网络视频聊天的web应用， 
-  - 最新的标准化进程可以查看这里。
+  - 面向第三方开发者的 WebRTC 标准 API(Javascript), 使开发者能够容易地开发出类似于网络视频聊天的 Web 应用
 - WebRTC Native C++ API
-  - 本地C++ API层，使浏览器厂商容易实现WebRTC标准的Web API，抽象地对数字信号过程进行处理。
-- Transport / Session 传输/会话层 
-  - 会话层组件采用了libjingle库的部分组件实现，无须使用xmpp/jingle协议
-- VoiceEngine 音频引擎是包含一系列音频多媒体处理的框架。 (VoiceEngine 是WebRTC极具价值的技术之一, 在VoIP上技术业界领先)
-  - Opus：支持从6 kbit/s到510 kbit/s的恒定和可变比特率编码，帧大小从2.5 ms到60 ms，各种采样率从8 kHz（4 kHz 带宽）到48 kHz（20 kHz带宽，可复制人类听觉系统的整个听力范围）。由IETF RFC 6176定义。 
-  - NetEQ 模块是 WebRTC 语音引擎中的核心模块, 一种动态抖动缓冲和错误隐藏算法，用于隐藏网络抖动和数据包丢失的负面影响
-  - 保持尽可能低的延迟，同时保持最高的语音质量
+  - 本地 C++ API 层, 使浏览器厂商容易实现 WebRTC 标准的 Web API, 抽象地对数字信号过程进行处理
+- Transport/Session 传输层/会话层 
+  - 会话层组件采用了 libjingle 库的部分组件实现, 无须使用 xmpp/jingle 协议
+- VoiceEngine 音频引擎是包含一系列音频多媒体处理的框架(WebRTC 极具价值的技术之一, 在VoIP上技术业界领先)
+  - Opus: 支持从 6kbit/s 到 510kbit/s 的恒定和可变比特率编码
+    - 帧大小从 2.5ms 到 60ms, 各种采样率从8 kHz(4kHz 带宽)到 48kHz(20kHz 带宽), 可复制人类听觉系统的整个听力范围
+    - 由 IETF RFC 6176 定义 
+  - NetEQ 模块是 WebRTC 语音引擎中的核心模块, 一种动态抖动缓冲和错误隐藏算法, 用于隐藏网络抖动和数据包丢失的负面影响
+  - 保持尽可能低的延迟, 同时保持最高的语音质量
 - VideoEngine WebRTC 视频处理引擎 
   - VideoEngine 是包含一系列视频处理的整体框架, 从摄像头采集视频到视频信息网络传输再到视频显示整个完整过程的解决方案
 - VP8 视频图像编解码器, 是 WebRTC 视频引擎的默认的编解码器 
-  - VP8 适合实时通信应用场景, 因为它主要是针对低延时而设计的编解码器
+  - 适合实时通信应用场景, 主要是针对低延时而设计的编解码器
 
-# 1.3 Web
-- WebRTC虽然冠以 'web' 之名, 但并不受限于传统互联网应用或浏览器的终端运行环境。
-- 实际上无论终端运行环境是浏览器、桌面应用、移动设备（Android或iOS）还是IoT设备，只要IP连接可到达且符合WebRTC规范就可以互通。
-- 这一点释放了大量智能终端（或运行在智能终端上的app）的实时通信能力，打开了许多对于实时交互性要求较高的应用场景的想象空间，
-- 譬如在线教育、视频会议、视频社交、远程协助、远程操控等等都是其合适的应用领域。
-
-- 直播 RTMP 多级服务器 CDN 单向分发 
-- WebRTC 中间服务器 双向传播 (最多 17 人 带宽要求)
+# 1.3 WebRTC 发展前景
+- WebRTC 虽然冠以 Web 之名, 但并不受限于传统互联网应用或浏览器的终端运行环境
+  - 实际上无论终端运行环境是浏览器, 桌面应用, 移动设备 (Android / iOS) 还是 IoT 设备
+  - 只要 IP 连接可到达且符合 WebRTC 规范就可以互通
+- 这一点释放了大量智能终端(或运行在智能终端上的 App)的实时通信能力, 打开了许多对于实时交互性要求较高的应用场景的想象空间
+  - 譬如在线教育, 视频会议, 视频社交, 远程协助, 远程操控等等都是其合适的应用领域
+- WebRTC 与 直播区别
+  - 直播 RTMP 多级服务器 CDN 单向分发 
+  - WebRTC 中间服务器 双向传播 (最多 17 人 带宽要求)
 
 # 1.4 相关厂商
 - 基于 WebRTC 二次开发音视频通话方案
@@ -55,7 +57,7 @@
 # 1.5 WebRTC 通话原理
 ## 媒体协商
 - Peer A: VP8, H264 编码
-- PeerB: VP9, H264 编码
+- Peer B: VP9, H264 编码
 - 要保证二端都采用正确编解码, 最简单的办法就是取它们的交集 H264 编码
 - Session Description Protocol(SDP): 用于描述上述这类信息
 - WebRTC 中, 参与视频通讯的双方必须先交换 SDP 信息, 这样双方才能知根知底, 而交换SDP的过程, 也称为媒体协商
@@ -83,24 +85,24 @@
   - 主要是给无法在公网环境下的视频通话设备分配公网 IP 用的, 这样两台电脑就可以在公网 IP 中进行通话
   - 使用一句话说明 STUN 做的事情就是: 告诉我你的公网 IP 地址 + 端口是什么
 - STUN 服务器的缺点
-  - 对称 NAT, 对于同一个内部地址, 每当它向不同的外部目标(IP 或端口)发送数据时, NAT 都会分配一个全新的、不同的外部端口, 此时 STUN 失效
+  - 对称 NAT, 对于同一个内部地址, 每当它向不同的外部目标(IP 或端口)发送数据时, NAT 都会分配一个全新的, 不同的外部端口, 此时 STUN 失效
   - P2P 通话(Mesh 拓扑) 中每个参与者都需要直接向其他所有参与者发送自己的视频流, 上行带宽消耗会随人数线性增长, 无法支撑多人会议
 
 ![](img/webrtc/03-stun-example.png)
 
 ## TURN 
-- Traversal Using Relays around NAT, 是 STUN/RFC5389 的一个拓展协议, 主要添加了Relay功能
-  - STUN 分配公网IP失败后, 采用公网的服务器作为一个中继, 对来往的数据进行转发
+- Traversal Using Relays around NAT, 是 STUN/RFC5389 的一个拓展协议, 主要添加了 Relay 功能
+  - STUN 分配公网 IP 失败后, 采用公网的服务器作为一个中继, 对来往的数据进行转发
 - TURN 服务器优点
   - 带宽从本地转移到服务器端, 在多人视频聊天的时候, 本地带宽压力较小
   - TURN 协议可以使用在所有的环境中 
 - TURN 服务器缺点 
-  - 按照单向数据 200kbps 为一对一通话标准, 一对连接需要 200kbps * 4 贷款
+  - 按照单向数据 200kbps 为一对一通话标准, 一对连接需要 200kbps * 4 带宽
 - 开源项目
   - coturn 开源项目集成了 STUN 和 TURN 的功能
   - ICE(Interactive Connectivity Establishment, 交互式连接建立) 
     - ICE 不是一种协议, 而是一个框架
-    - 包含了收集地址(调用 STUN/TURN), 交换地址(通过信令), 连通性检查(发Ping打洞), 最终建立连接的一整套完整机制
+    - 包含了收集地址(调用 STUN/TURN), 交换地址(通过信令), 连通性检查(发 Ping 打洞), 最终建立连接的一整套完整机制
 - 术语
   - WebRTC 媒体协商: SDP 编解码类型
   - WebRTC 网络协商: Candidate 描述网络信息
@@ -144,7 +146,7 @@
 ![](img/webrtc/05-p2p-procedure-1.png)
 
 ## NAT 补充
-- P2P技术详解(一)：NAT详解——详细原理、P2P简介 https://www.cnblogs.com/mlgjb/p/8243646.htm 
-- P2P技术详解(二)：P2P中的NAT穿越(打洞)方案详解 https://www.jianshu.com/p/9bfbcbee0abb 
-- P2P技术详解(三)：P2P技术之STUN、TURN、ICE详解 https://www.jianshu.com/p/258e7d8be2ba
-- 详解P2P技术中的NAT穿透原理 https://www.jianshu.com/p/f71707892eb2
+- P2P技术详解(一): NAT 详解——详细原理、P2P简介 https://www.cnblogs.com/mlgjb/p/8243646.htm 
+- P2P技术详解(二): P2P 中的 NAT 穿越(打洞)方案详解 https://www.jianshu.com/p/9bfbcbee0abb 
+- P2P技术详解(三): P2P 技术之 STUN, TURN, ICE 详解 https://www.jianshu.com/p/258e7d8be2ba
+- 详解 P2P 技术中的 NAT 穿透原理 https://www.jianshu.com/p/f71707892eb2

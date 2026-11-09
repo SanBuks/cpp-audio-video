@@ -15,7 +15,12 @@
 - 构建 `make`
 - 安装 `sudo make install`
 - 测试
-  - 启动服务 `sudo nohup turnserver -L 0.0.0.0 -a -u lqf:123456 -v -f -r nort.gov &`
+  - 后台启动服务 `sudo nohup turnserver -L 0.0.0.0 -a -u lqf:123456 -v -f -r nort.gov &`
+  - 前台启动服务 `sudo turnserver -L 0.0.0.0 -a -u lqf:123456 -v -f -r nort.gov`
+  - 终止后台服务
+    - 先确认进程存在 `pgrep -a turnserver`
+    - 正常终止 `sudo pkill turnserver`
+    - 若没退出, 强制杀 `sudo pkill -9 turnserver`
   - 查看端口 `sudo lsof ‐i:3478`
   - 查看日志 `sudo tail -f nohup.out`
   - 测试网址 `https://webrtc.github.io/samples/src/content/peerconnection/trickle-ice/`

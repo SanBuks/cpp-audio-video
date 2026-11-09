@@ -165,3 +165,4 @@ pc.onconnectionstatechange = function(event) {
 （10）如果P2P能成功则进行P2P通话，如果P2P不成功则进行中继转发通话。
 
 - 综合调试和完善
+- `sudo sar -n DEV 1`

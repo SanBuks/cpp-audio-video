@@ -10,11 +10,11 @@
       <el-button @click="leave"> 离开 </el-button>
     </el-col>
   </el-row>
-  <el-row :gutter="10">
+  <el-row :gutter="10" style="margin-top: 10px">
     <el-col :span="12">
       <video ref="localVideo" autoplay muted playsinline> 本地窗口</video>
     </el-col>
-    <el-col :span="12">
+    <el-col :span="12" >
       <video ref="remoteVideo" autoplay playsinline> 远端窗口</video>
     </el-col>
   </el-row>
@@ -26,9 +26,8 @@ import {WebRTCEngine} from "@/utils/video";
 
 let localVideo = ref()        // 本地窗口控件
 let remoteVideo = ref()       // 远程窗口控件
-let roomId = ref<string>('')  // 房间号码
+let roomId = ref<string>('')  // 房间 ID
 let engine: WebRTCEngine | null = null;
-let localStream: MediaStream | null = null  // 本地流
 
 // 进入会议
 function join() {
@@ -44,11 +43,9 @@ function leave() {
   engine.doLeave(roomId.value)
 }
 
-
 // 初始化本地流
 function initLocalStream() {
-  let eng = engine
-  if (eng === null) {
+  if (engine === null) {
     alert("ws 连接未建立!");
     return;
   }
@@ -66,11 +63,9 @@ function initLocalStream() {
       frameRate: { ideal: 30 }
     },
   }).then((stream: MediaStream) => {
-      eng.setLocalStream(stream)
-      eng.doJoin(rid)
+      engine!.openLocalStream(stream)
+      engine!.doJoin(rid)
       console.log('Open local stream');
-      localVideo.value.srcObject = stream;
-      localStream = stream;
     }
   ).catch((e) => {
       alert("getUserMedia() error: " + e.name);
@@ -78,6 +73,7 @@ function initLocalStream() {
 }
 
 onMounted(() => {
+  // TODO 处理配置
   const wsProtocol = location.protocol === 'https:' ? 'wss' : 'ws'
   engine = new WebRTCEngine(
       `${wsProtocol}://${location.hostname}:8099`,

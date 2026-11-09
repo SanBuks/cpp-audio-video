@@ -13,6 +13,7 @@ const SIGNAL_TYPE_CANDIDATE = "candidate";    // 发送 candidate 给对端 peer
 const port = 8099;               // 端口号
 const roomTableMap = new Map();  // 房间列表 Map
 
+// 处理加入信令, 返回用户信息
 function handleJoin(msg, conn) {
     let roomId = msg.roomId;
     let uid = msg.uid;
@@ -25,7 +26,7 @@ function handleJoin(msg, conn) {
     if (roomMap.size > 2) {
         console.error(`roomId: ${roomId} 已经有两人存在, 请使用其他房间`);
         // TODO 加信令通知客户端, 房间已满
-        return;
+        return null;
     }
 
     // 房间存放本用户
@@ -33,7 +34,7 @@ function handleJoin(msg, conn) {
     roomMap.set(uid, client);
 
     // 房间只存在自己, 不需要 new-peer, resp-join
-    if (roomMap.size === 1) return;
+    if (roomMap.size === 1) return client;
 
     // 房间已经存在人, 需要通知
     for (const [mp_uid, mp_client] of roomMap.entries()) {
@@ -57,6 +58,7 @@ function handleJoin(msg, conn) {
         console.log(`${SIGNAL_TYPE_RESP_JOIN}: ${respJoinStr}`)
         client.conn.sendText(respJoinStr)
     }
+    return client;
 }
 
 function handleLeave(msg, conn) {
@@ -65,10 +67,14 @@ function handleLeave(msg, conn) {
     console.log(`uid: ${uid} try to leave room ${roomId}`);
 
     if (!roomTableMap.has(roomId)) {
-       console.error(`roomId: ${roomId} 房间不存在!`);
+        console.error(`roomId: ${roomId} 房间不存在!`);
         return;
     }
     let roomMap = roomTableMap.get(roomId);
+    if (!roomMap.has(uid)) {
+        console.log(`uid: ${uid} have left roomId: ${roomId}!`);
+        return;
+    }
     roomMap.delete(uid);
 
     // 房间不存在人, 直接返回
@@ -84,6 +90,13 @@ function handleLeave(msg, conn) {
         console.log(`${SIGNAL_TYPE_PEER_LEAVE}: ${mp_uid}  ${uid} leave room ${roomId}`);
         mp_client.conn.sendText(peerLeaveStr);
     }
+}
+
+function handleForceLeave(client) {
+    let roomId = client.roomId;
+    let uid = client.uid;
+    console.log(`uid: ${uid} close connection`);
+    handleLeave({roomId, uid})
 }
 
 function handleOffer(msg, conn) {
@@ -157,6 +170,8 @@ function handleCandidate(msg, conn) {
 
 let server = ws.createServer((conn) => {
     console.log("创建一个新的连接 -------- ");
+    // 当前连接的用户信息
+    conn.client = null;
 
     conn.on("text", (str) => {
         console.info(`接收信息: ${str}`);
@@ -164,7 +179,7 @@ let server = ws.createServer((conn) => {
 
         switch (jsonMsg.cmd) {
             case SIGNAL_TYPE_JOIN:
-                handleJoin(jsonMsg, conn);
+                conn.client = handleJoin(jsonMsg, conn);
                 break;
             case SIGNAL_TYPE_LEAVE:
                 handleLeave(jsonMsg, conn);
@@ -183,6 +198,8 @@ let server = ws.createServer((conn) => {
     });
     conn.on("close", (code, reason) => {
         console.info(`连接关闭 code: ${code}, reason: ${reason}`)
+        if (conn.client === null) return;
+        handleForceLeave(conn.client);
     });
     conn.on("error", (err) => {
         console.info("监听到错误:" + err)
