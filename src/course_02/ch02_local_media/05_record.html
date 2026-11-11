@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>MediaRecorder 录制示例</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 20px; }
+    button { margin-right: 8px; padding: 6px 12px; }
+    video { width: 360px; background: #000; border-radius: 6px; margin-top: 12px; }
+    .row { display: flex; gap: 16px; flex-wrap: wrap; }
+    #status { margin: 10px 0; color: #555; }
+  </style>
+</head>
+<body>
+  <h3>MediaRecorder 录制示例</h3>
+  <button id="startBtn">开始录制</button>
+  <button id="pauseBtn" disabled>暂停</button>
+  <button id="resumeBtn" disabled>继续</button>
+  <button id="stopBtn" disabled>停止</button>
+  <a id="downloadLink" style="display:none; margin-left:8px;">下载录制文件</a>
+
+  <div id="status">状态：未开始</div>
+
+  <div class="row">
+    <div>
+      <div>实时预览</div>
+      <video id="preview" autoplay muted playsinline></video>
+    </div>
+    <div>
+      <div>录制回放</div>
+      <video id="playback" controls playsinline></video>
+    </div>
+  </div>
+
+  <script type="module">
+    const startBtn   = document.getElementById('startBtn');
+    const pauseBtn   = document.getElementById('pauseBtn');
+    const resumeBtn  = document.getElementById('resumeBtn');
+    const stopBtn    = document.getElementById('stopBtn');
+    const statusEl   = document.getElementById('status');
+    const preview    = document.getElementById('preview');
+    const playback   = document.getElementById('playback');
+    const downloadLink = document.getElementById('downloadLink');
+
+    let mediaRecorder = null;
+    let sourceStream  = null;
+    let chunks        = [];   // 存放每次 dataavailable 的 Blob 片段
+
+    // 选出浏览器支持的 MIME 类型（Chrome/Firefox 用 webm，Safari 用 mp4）
+    function pickMimeType() {
+      const candidates = [
+        'video/webm;codecs=vp9,opus',
+        'video/webm;codecs=vp8,opus',
+        'video/webm',
+        'video/mp4'
+      ];
+      return candidates.find(t => MediaRecorder.isTypeSupported(t)) || '';
+    }
+
+    startBtn.onclick = async () => {
+      try {
+        // 1) 获取要录制的媒体流（这里用摄像头 + 麦克风）
+        //    如果是录制屏幕，换成：await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true })
+        sourceStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      } catch (err) {
+        statusEl.textContent = `获取媒体流失败：${err.name} - ${err.message}`;
+        return;
+      }
+
+      preview.srcObject = sourceStream;
+
+      // 2) 创建 MediaRecorder
+      const mimeType = pickMimeType();
+      const options = mimeType ? { mimeType } : {};
+      mediaRecorder = new MediaRecorder(sourceStream, options);
+
+      chunks = [];
+
+      // 3) 每次有可用数据时收集起来
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data && event.data.size > 0) {
+          chunks.push(event.data);
+        }
+      };
+
+      // 4) 录制结束后，把片段拼成一个完整的 Blob
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(chunks, { type: mediaRecorder.mimeType || 'video/webm' });
+        const url = URL.createObjectURL(blob);
+
+        playback.src = url;
+        downloadLink.href = url;
+        downloadLink.download = `recording-${Date.now()}.${mimeType.includes('mp4') ? 'mp4' : 'webm'}`;
+        downloadLink.style.display = 'inline';
+
+        // 释放摄像头/麦克风
+        sourceStream.getTracks().forEach(t => t.stop());
+        statusEl.textContent = `已停止，文件大小：${(blob.size / 1024 / 1024).toFixed(2)} MB`;
+        startBtn.disabled = false;
+      };
+
+      // 5) 开始录制：传入 timeslice（毫秒），每隔 1 秒触发一次 ondataavailable
+      //    不传的话，只有 stop 时才触发一次
+      mediaRecorder.start(1000);
+
+      statusEl.textContent = `录制中…（MIME: ${mediaRecorder.mimeType}）`;
+      startBtn.disabled = true;
+      pauseBtn.disabled = false;
+      stopBtn.disabled = false;
+    };
+
+    pauseBtn.onclick = () => {
+      if (mediaRecorder?.state === 'recording') {
+        mediaRecorder.pause();
+        statusEl.textContent = '已暂停';
+        pauseBtn.disabled = true;
+        resumeBtn.disabled = false;
+      }
+    };
+
+    resumeBtn.onclick = () => {
+      if (mediaRecorder?.state === 'paused') {
+        mediaRecorder.resume();
+        statusEl.textContent = '录制中…';
+        pauseBtn.disabled = false;
+        resumeBtn.disabled = true;
+      }
+    };
+
+    stopBtn.onclick = () => {
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        mediaRecorder.stop();  // 触发最后一次 ondataavailable，然后触发 onstop
+        pauseBtn.disabled = true;
+        resumeBtn.disabled = true;
+        stopBtn.disabled = true;
+      }
+    };
+  </script>
+</body>
+</html>

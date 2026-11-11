@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>媒体轨道示例</title>
+  <script type="module">
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    const videoTrack = stream.getVideoTracks()[0];
+
+    const capabilities = videoTrack.getCapabilities();
+    console.log(capabilities);
+
+    await videoTrack.applyConstraints({
+      width: { min: 640, ideal: 1280 },
+      height: { min: 480, ideal: 720 }
+    });
+
+    videoTrack.stop()
+  </script>
+</head>
+<body>
+</body>
+</html>

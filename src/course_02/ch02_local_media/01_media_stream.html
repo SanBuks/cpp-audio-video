@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>媒体流示例</title>
+  <script type="module">
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+    console.log(`stream active: ${stream.active}, id: ${stream.id}`)
+
+    const audioTrack = stream.getAudioTracks()[0];
+    console.log(`audio track label: ${audioTrack.label}`)
+    const videoTrack = stream.getVideoTracks()[0];
+    console.log(`video track label: ${videoTrack.label}`)
+
+    const tracks = stream.getTracks();
+    for (let t of tracks)
+      console.log(`track label: ${t.label}, track kind: ${t.kind}`)
+  </script>
+</head>
+<body>
+</body>
+</html>

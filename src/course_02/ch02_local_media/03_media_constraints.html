@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>媒体约束示例</title>
+  <script type="module">
+    // #1. 获取浏览器支持的约束数组
+    let constraints = navigator.mediaDevices.getSupportedConstraints()
+    console.log(constraints)
+    if (constraints && constraints.iso) {
+      console.log('iso exist!')
+    }
+    // #2. 获取轨道约束能力 (显示范围)
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    const videoTrack = stream.getVideoTracks()[0];
+    const capabilities = videoTrack.getCapabilities();
+    console.log(capabilities);
+    // #3. 应用约束
+    await videoTrack.applyConstraints({
+      width: { min: 640, ideal: 1280 },
+      height: { min: 480, ideal: 720 }
+    });
+    // #4. 查看约束
+    const trackConstraints = videoTrack.getConstraints();
+    console.log(trackConstraints);
+    // #5. 查看所有约束实际值
+    const settings = videoTrack.getSettings();
+    console.log(settings)
+  </script>
+</head>
+<body>
+</body>
+</html>

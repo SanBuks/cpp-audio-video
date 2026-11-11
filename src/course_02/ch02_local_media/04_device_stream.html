@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>媒体流约束示例</title>
+  <script type="module">
+
+    const video = document.querySelector("#video");
+    const screen = document.querySelector("#screen");
+
+    // #1. 获取视频流
+    navigator.mediaDevices
+      .getUserMedia({ video: true })
+      .then((stream)=>{
+        video.srcObject = stream;
+    }).catch((err)=>{
+      console.log(`获取视频媒体流错误 ${err}`);
+    });
+
+    // #2. 获取屏幕流
+    navigator.mediaDevices
+      .getDisplayMedia({ video: true })
+      .then((stream)=>{
+        screen.srcObejct = stream
+    }).catch((err)=>{
+      console.log(`获取屏幕共享媒体流错误 ${err}`)
+    });
+
+    // #3. 遍历设备
+    let devices = await navigator.mediaDevices.enumerateDevices();
+    devices.forEach(device => console.log(device.kind + ": " + device.label + " id = " + device.deviceId));
+  </script>
+</head>
+
+<body>
+<video id="screen" autoplay controls></video>
+<br/>
+<video id="video" autoplay controls></video>
+</body>
+</html>
