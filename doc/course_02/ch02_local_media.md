@@ -183,7 +183,7 @@ const constraints = {
 - 基础 ideal 软期望: 最后层检查, 在所有 advanced 方案都失败后的最终保底选择, 浏览器会选用最接近的值
 - advanced 优先方案: 在满足基础约束后, 优先于基础 ideal 被尝试, 继续尝试数组中的下一个方案
 
-# 4. 媒体设备
+# 4. 媒体设备 MediaDevicesInfo 
 ## 4.1 WebRTC 隐私和安全
 - WebRTC 使用 navigator.mediaDevices 接口访问与浏览器相连的媒体设备, 该接口提供了访问摄像头, 话筒以及屏幕共享的入口 API
 - WebRTC 为了保护用户的隐私, 必须在安全的内容中使用
@@ -202,6 +202,7 @@ const constraints = {
   - frameRate 视频帧率, 双精浮点值, 如果未指定参数, 则每次画布变化时都会捕获一个新帧
   - 如果取值为 0, 则不会自动捕获, 而是在调用 requestFrame() 方法时触发捕获
   - 返回 MediaStream 媒体流对象, 单一媒体轨道为 CanvasCaptureMediaStreamTrack
+- 获取视频元素/音频元素流 `mediaElement.captureStream();`
 
 ## 4.3 媒体设备
 - 列出所有可用的媒体设备 `navigator.mediaDevices.enumerateDevices();`
@@ -213,4 +214,20 @@ const constraints = {
 ## 4.5 播放媒体流
 - 将流对象赋值给视频元素的 srcObject 属性, 从而实现本地播放音视频
 
-## 4.6 录制媒体流
+## 4.6 录制媒体流 MediaRecorder
+### MediaRecorder 构造函数
+- 构造 MediaRecorder 对象 `new MediaRecorder(stream: MediaStrem [, options: MediaRecorderOptions]);`
+- MediaRecorderOptions
+  - mimeType 指定录制流的编码格式
+    - 调用 MediaRecorder.isTypeSupported() 方法检查当前浏览器是否支待指定的编码格式
+    - 如果当前浏览器不支待指定的编码格式, 则该构造函数抛出异常NoiSupportedError
+  - audioBitsPerSecond 指定录制流的音频码率
+  - videoBitsPerSecond 指定录制流的视频玛率
+  - bitsPerSecond 指定录制流中音视频的玛率, 用于替代上述两个属性
+    - 如果这两个属性只指定了一个, 则将替代另外一个
+  - audioBitrateMode 指定音频码率模式, 取值为 cbr 或 vbr 
+    - cbr 指以固定码率进行编码
+    - vbr 指以可变码率进行编码
+### MediaRecorder 属性
+### MediaRecorder 方法
+### MediaRecorder 事件
