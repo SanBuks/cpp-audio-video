@@ -1,0 +1,31 @@
+<!doctype html>
+<html>
+<head>
+  <title>RTCPeerConnection</title>
+  <meta charset="utf-8">
+
+  <link href="peer.css" rel="stylesheet">
+  <script type="text/javascript" src="client.js"></script>
+  <script src="adapter.js"></script>
+
+</head>
+<body>
+  <div class="container">
+    <div class="infobox">
+      <h1>深入WebRTC直播技术-示例</h1>
+      <h2>点击用户列表里面的名称，建立WebRTC连接</h2>
+      <p>输入用户名:
+        <input id="name" type="text" maxlength="12" required placeholder="Username"
+               autocomplete="username" inputmode="verbatim">
+        <input type="button" name="login" value="加入" onclick="connect()">
+      </p>
+    </div>
+    <ul class="userlistbox"></ul>
+    <div class="logbox"></div>
+    <div class="camerabox">
+      <video id="received_video" autoplay></video>
+      <video id="local_video" autoplay muted></video>
+    </div>
+  </div>
+</body>
+</html>
