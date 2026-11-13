@@ -33,3 +33,18 @@
 # RTCPeerConnection 接口
 
 # 完美协商模式
+
+# 实战项目
+```js
+let username = {
+  name: myUsername,
+  date: Date.now(),
+  id: clientID,
+  type: "username"
+}
+```
+
+
+ClientID  <- connect
+          -> userName
+```
