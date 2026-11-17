@@ -7,11 +7,15 @@ const createTransport = async (router) => new Promise(async (resolve, reject) =>
     listenInfos: [
       {
         protocol: 'udp',
-        ip: '127.0.0.1'
+        // ip: '127.0.0.1'
+        ip: '0.0.0.0',
+        announceAddress: '192.168.0.19'
       },
       {
         protocol: 'tcp',
-        ip: '127.0.0.1'
+        // ip: '127.0.0.1'
+        ip: '0.0.0.0',
+        announceAddress: '192.168.0.19'
       }
     ]
   })

@@ -107,6 +107,18 @@ async function createConsumer() {
     console.log("consumer transport connected")
   })
 
+  // 显示 transport 连接状态
+  consumerTransport.on("connectionstatechange", async (state) => {
+    console.log('... connectionstatechange ...')
+    console.log(state)
+  })
+
+  // 显示 ice 连接状态
+  consumerTransport.on("icegatheringstatechange", async (state) => {
+    console.log('... icegatheringstatechange ...')
+    console.log(state)
+  })
+
   createConsButton.disabled = true
   consumeButton.disabled = false
 }
@@ -128,10 +140,23 @@ async function consume() {
   }
   consumer = await consumerTransport.consume(consumerParams)
   const {track} = consumer
+
+  // 监听轨道事件
+  track.addEventListener("ended", () => {
+    console.log("Track has ended")
+  })
+  track.onmute = () => {
+    console.log("Track has muted")
+  }
+  track.onunmute = () => {
+    console.log("Track has unmuted")
+  }
+
   remoteVideo.srcObject = new MediaStream([track])
   console.log("track is ready!")
   const resp = await socket.emitWithAck("unpause-consumer")
   console.log(resp)
+  console.log(track)
 
   consumeButton.disabled = true
   disconnectButton.disabled = false

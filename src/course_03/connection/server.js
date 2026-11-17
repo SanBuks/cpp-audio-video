@@ -101,7 +101,6 @@ io.on('connect', socket => {
       ack("error")
     }
   })
-
   // 处理客户端 consume 请求, 调用 transport.consume(), 返回
   socket.on('consume-media', async({rtpCapabilities}, ack) => {
 
@@ -118,7 +117,7 @@ io.on('connect', socket => {
       thisClientConsumer = await thisClientConsumerTransport.consume({
         producerId: thisClientProducer.id,
         rtpCapabilities,
-        paused: true,
+        paused: true,   // 最佳实践需要设置为 paused
       })
       let consumerParams = {
         id: thisClientConsumer.id,
@@ -133,6 +132,7 @@ io.on('connect', socket => {
     }
   })
 
+  // 恢复 consumer
   socket.on("unpause-consumer", async(ack) => {
     await thisClientConsumer.resume()
     ack("start living!")

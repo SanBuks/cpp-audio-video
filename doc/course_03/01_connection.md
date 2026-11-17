@@ -67,3 +67,13 @@
   - router.canConsume
   - thisClientConsumerTransport.consume()
   - ack(consumerParams)
+
+# 调试相关
+- 查看地址: `chrome://webrtc-internals`
+- 文档: mdn-doc, MediaStream 
+- 增加状态监听回调
+  - track.addEventListener("ended", cb) 
+  - track.onmute = cb 
+  - track.onunmute = cb 
+  - consumerTransport.on("connectionstatechange", ...) 
+  - consumerTransport.on("icegatheringstatechange", ...)
