@@ -6,7 +6,7 @@
 # 5 
 - app 
   - mkcert, express, https, socket.io
-  - 
+  - `npx mkcert create-cert` 
   - config, createWorkers, initMediasoup
   - mediasoup.createWorker() 参数
   - worker.on('died')

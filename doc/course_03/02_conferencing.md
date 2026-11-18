@@ -1,0 +1,3 @@
+- "mediasoup-client": "^3.15.0",
+- "socket.io-client": "^4.8.1"
+- socket 连接存在重连, 需要避免 socket 绑定多个事件
