@@ -6,6 +6,7 @@
 # 5 
 - app 
   - mkcert, express, https, socket.io
+  - 
   - config, createWorkers, initMediasoup
   - mediasoup.createWorker() 参数
   - worker.on('died')
@@ -32,6 +33,20 @@
   - server: 创建 transport, 具有 ICE, SRTP, DTLS 相关参数, 监听两个事件(connect, produce), 最后回应 client (transport 还未连接)
   - client: 创建 transport, 监听两个事件(connect, produce), 创建 DTLS, 向服务器发送信令
   - server: 调用 connect 建立连接, RTP, DTLS
+
+
+# 项目业务过程
+## Init Server
+
+## Init Connect
+- (client) 创建 socket.io 连接 `socket = io("https://localhost:3030")`
+- (client) 监听 connect 事件 `socket.on('connect', ...)`
+- (server) 监听 connect 事件
+  - 创建局部与客户端对等的 ProducerTransport, Producer, ConsumerTransport, Consumer
+  - 给 socket 挂载若干个信令处理回调 
+
+## Create & LoadDevice
+- (client) new mediasoupClient.Device()
 
 # 016 Create Server Producer Transport
 # 017 Create Client Producer Transport
@@ -77,3 +92,25 @@
   - track.onunmute = cb 
   - consumerTransport.on("connectionstatechange", ...) 
   - consumerTransport.on("icegatheringstatechange", ...)
+
+# 多设备调试
+- 调整为 不用创建 producer 也可以 consume 
+  - 处理 按钮状态, 加载设备后就可以 consume
+  - 备份一个 producer 作为最新的全局对象
+  - 处理 consume-media 使用最新 producer 对象
+- 修改网络配置
+  - (server) createTransport 中 listenInfos 
+    - ip: '0.0.0.0',
+    - announcedAddress: config.ip
+  - (server) socketio 调整为 config.ip
+  - (server) ca.crt 安装到本地证书中
+  - (client) socket 连接调整为实际 ip 
+  - (client) index.html 包含 socket.io 地址需要修改为实际 ip 
+
+# 关闭 
+- 关闭事件影响顺序 worker - router - transport - producer - consumer
+- 过程
+  - (client) socket.emitWithAck("close-all")
+  - (server) xxxTransport.close(), ack
+  - (client) xxxTransport.close()
+- producer 和 consumer 有 transportclose event 可以回调

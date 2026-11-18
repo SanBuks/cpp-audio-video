@@ -1,6 +1,10 @@
 
-let socket = null
-let device = null
+// const kIp = 'localhost'    // IP 常量
+const kIp = '192.168.0.19'
+
+
+let socket = null         // socket 连接
+let device = null         // Device 对象
 let localStream = null
 let producerTransport = null
 let producer = null
@@ -8,7 +12,7 @@ let consumerTransport = null
 let consumer = null
 
 function initConnect() {
-  socket = io("https://localhost:3030")
+  socket = io(`https://${kIp}:3030`)
   connectButton.innerHTML = "connecting..."
   connectButton.disabled = true
   addSocketListeners()
@@ -24,10 +28,12 @@ function addSocketListeners() {
 async function deviceSetup() {
   device = new mediasoupClient.Device()
   const routerRtpCapabilities =  await socket.emitWithAck('getRtpCap')
-  console.log(routerRtpCapabilities)
+  // console.log(routerRtpCapabilities)
   await device.load({routerRtpCapabilities})
   deviceButton.disabled = true
-  createProdButton.disabled = false
+  createProdButton.disabled = false  // 可以创建 producer
+  createConsButton.disabled = false  // 可以创建 consumer
+  disconnectButton.disabled = false
   console.log(`device load status: ${device.loaded}`)
 }
 
@@ -160,4 +166,13 @@ async function consume() {
 
   consumeButton.disabled = true
   disconnectButton.disabled = false
+}
+
+async function disconnect() {
+  const resp = await socket.emitWithAck("close-all")
+  if (resp === 'close err') {
+    console.log('close-all err')
+  }
+  producerTransport?.close()
+  consumerTransport?.close()
 }

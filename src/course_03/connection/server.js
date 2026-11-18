@@ -24,8 +24,9 @@ const createTransport = require('./createTransport')
 const config = require('./config/config')
 
 
-let workers = null
-let router = null
+let workers = null          // 限制只有一个 worker
+let router = null           // 限制只有一个 router
+let theLastProducer = null  // 最后发布的生产者
 
 // 初始化 mediasoup
 const initMediasoup = async () => {
@@ -33,14 +34,13 @@ const initMediasoup = async () => {
   router = await workers[0].createRouter({
     mediaCodecs: config.routerMediaCodecs
   })
-  // console.log(router)
 }
 
 initMediasoup()
 
 // 通过 https 服务 创建 socketio
 const io = socketio(httpsServer, {
-  cors: [`https://localhost:${config.port}`]
+  cors: [`https://${config.ip}:${config.port}`]
 })
 
 io.on('connect', socket => {
@@ -56,13 +56,13 @@ io.on('connect', socket => {
   socket.on('getRtpCap', async ack => {
     ack(router.rtpCapabilities)
   })
+
   // 处理客户端建立 transport producer 请求, 返回 ice 相关信息
   socket.on('create-producer-transport', async ack => {
     const {transport, clientTransportParams} = await createTransport(router)
     thisClientProducerTransport = transport
     ack(clientTransportParams)
   })
-
   // 处理客户端建立 transport consumer 请求, 返回 ice 相关信息
   socket.on('create-consumer-transport', async ack => {
     const {transport, clientTransportParams} = await createTransport(router)
@@ -95,6 +95,7 @@ io.on('connect', socket => {
   socket.on('start-producing', async({kind, rtpParameters}, ack) => {
     try {
       thisClientProducer = await thisClientProducerTransport.produce({kind, rtpParameters})
+      theLastProducer = thisClientProducer  // 保留一份全局作为最新的 producer
       ack(thisClientProducer.id)
     } catch (err) {
       console.log(err)
@@ -104,24 +105,28 @@ io.on('connect', socket => {
   // 处理客户端 consume 请求, 调用 transport.consume(), 返回
   socket.on('consume-media', async({rtpCapabilities}, ack) => {
 
-    if (!thisClientProducer) {
+    // if (!thisClientProducer) {
+    if (!theLastProducer) {  // 始终订阅最新 producer
       ack("noProducer")
       return
     }
-    if (!router.canConsume({producerId: thisClientProducer.id, rtpCapabilities})) {
+    // if (!router.canConsume({producerId: thisClientProducer.id, rtpCapabilities})) {
+    if (!router.canConsume({producerId: theLastProducer.id, rtpCapabilities})) {
       ack("cannotConsume")
       return
     }
 
     try {
       thisClientConsumer = await thisClientConsumerTransport.consume({
-        producerId: thisClientProducer.id,
+        // producerId: thisClientProducer.id,
+        producerId: theLastProducer.id,
         rtpCapabilities,
         paused: true,   // 最佳实践需要设置为 paused
       })
       let consumerParams = {
         id: thisClientConsumer.id,
-        producerId: thisClientProducer.id,
+        // producerId: thisClientProducer.id,
+        producerId: theLastProducer.id,
         kind: thisClientConsumer.kind,
         rtpParameters: thisClientConsumer.rtpParameters,
       }
@@ -136,6 +141,17 @@ io.on('connect', socket => {
   socket.on("unpause-consumer", async(ack) => {
     await thisClientConsumer.resume()
     ack("start living!")
+  })
+
+  socket.on("close-all", async(ack) => {
+    try {
+      thisClientConsumerTransport.close()
+      thisClientProducerTransport.close()
+      ack('closed')
+    } catch(err) {
+      console.log("close err:" + err)
+      ack('close err')
+    }
   })
 })
 

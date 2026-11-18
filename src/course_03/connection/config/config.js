@@ -1,6 +1,9 @@
 // 全局配置
 const config = {
-  port: 3030,
+  port: 3030,          // 端口号
+  ip: '192.168.0.19',  // ip
+  // ip: 'localhost',
+  ipAddress: '',       // 域名
 
   workerSettings: {
     logLevel: 'warn',
