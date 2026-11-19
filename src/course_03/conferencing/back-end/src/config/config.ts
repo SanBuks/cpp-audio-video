@@ -9,7 +9,7 @@ export interface AppConfig {
 // 全局配置
 export const config: AppConfig = {
   ip: '127.0.0.1',
-  port: 3443,
+  port: 3031,
 
   routerMediaCodecs: [
     {

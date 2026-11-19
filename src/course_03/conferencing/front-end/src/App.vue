@@ -20,28 +20,28 @@
     <!-- 顶部小视频（非主导说话者） -->
     <div class="remote-media">
       <div class="remote-video-container remote-speaker">
-        <video :ref="(el) => setRemoteVideoRef(el, 1)" class="remote-video" autoplay inline controls></video>
-        <div :ref="(el) => setUsernameRef(el, 1)" class="username"></div>
+        <video ref="remoteVideo1" class="remote-video" autoplay inline controls></video>
+        <div ref="username1" class="username"></div>
       </div>
       <div class="remote-video-container">
-        <video :ref="(el) => setRemoteVideoRef(el, 2)" class="remote-video" autoplay inline controls></video>
-        <div :ref="(el) => setUsernameRef(el, 2)" class="username"></div>
+        <video ref="remoteVideo2" class="remote-video" autoplay inline controls></video>
+        <div ref="username2" class="username"></div>
       </div>
       <div class="remote-video-container">
-        <video :ref="(el) => setRemoteVideoRef(el, 3)" class="remote-video" autoplay inline controls></video>
-        <div :ref="(el) => setUsernameRef(el, 3)" class="username"></div>
+        <video ref="remoteVideo3" class="remote-video" autoplay inline controls></video>
+        <div ref="username3" class="username"></div>
       </div>
       <div class="remote-video-container">
-        <video :ref="(el) => setRemoteVideoRef(el, 4)" class="remote-video" autoplay inline controls></video>
-        <div :ref="(el) => setUsernameRef(el, 4)" class="username"></div>
+        <video ref="remoteVideo4" class="remote-video" autoplay inline controls></video>
+        <div ref="username4" class="username"></div>
       </div>
     </div>
 
     <!-- 当前说话者大视频 -->
     <div class="current-speaker">
       <div class="current-video-container">
-        <video :ref="(el) => setRemoteVideoRef(el, 0)" class="remote-video" autoplay inline controls></video>
-        <div :ref="(el) => setUsernameRef(el, 0)" class="username"></div>
+        <video ref="remoteVideo0" class="remote-video" autoplay inline controls></video>
+        <div ref="username0" class="username"></div>
       </div>
     </div>
 
@@ -64,6 +64,7 @@ import { MSG_JOIN_ROOM } from '@/constant/signaling-msg'
 // import requestTransportToConsume from './mediaSoupFunctions/requestTransportToConsume'
 
 let socket: Socket
+let device: Device
 
 onMounted(() => {
   socket = io('https://localhost:3031')
@@ -75,38 +76,44 @@ onMounted(() => {
 const roomName = ref('')
 const userName = ref('')
 
-const joined = ref(false) // 替代原 d-none 的显隐控制
+const joined = ref(false)    // 替代原 d-none 的显隐控制
 const feedReady = ref(false) // 替代 "send-feed" 按钮的 disabled 状态
 
 // ---- 视频 / 用户名元素引用 ----
 const localVideoRef = ref<HTMLVideoElement | null>(null)
-const remoteVideos = ref<(HTMLVideoElement | null)[]>([])
-const usernameEls = ref<(HTMLElement | null)[]>([])
 
-const setRemoteVideoRef = (el: any, index: number) => {
-  remoteVideos.value[index] = el as HTMLVideoElement | null
-}
-const setUsernameRef = (el: any, index: number) => {
-  usernameEls.value[index] = el as HTMLElement | null
-}
+const remoteVideo0 = ref<(HTMLVideoElement | null)[]>([])
+const remoteVideo1 = ref<(HTMLVideoElement | null)[]>([])
+const remoteVideo2 = ref<(HTMLVideoElement | null)[]>([])
+const remoteVideo3 = ref<(HTMLVideoElement | null)[]>([])
+const remoteVideo4 = ref<(HTMLVideoElement | null)[]>([])
 
-const onJoin = () => {
-  socket.emitWithAck(MSG_JOIN_ROOM, {
+const username0 = ref<(HTMLElement | null)[]>([])
+const username1= ref<(HTMLElement | null)[]>([])
+const username2= ref<(HTMLElement | null)[]>([])
+const username3= ref<(HTMLElement | null)[]>([])
+const username4= ref<(HTMLElement | null)[]>([])
+
+const onJoin = async () => {
+  const resp = await socket.emitWithAck(MSG_JOIN_ROOM, {
     roomName: roomName.value,
-    userName: userName.value
+    userName: userName.value,
   })
+  console.log(resp)
+  device = new Device()
+  await device.load({
+    routerRtpCapabilities: resp.routerRtpCapabilities,
+  })
+  console.log(device)
+  joined.value = true
 }
+
 const onEnableFeed = () => {}
 const onSendFeed = () => {}
 const onToggleMute = () => {}
 const onHangUp = () => {
   joined.value = false
 }
-
-// ---- 用法示例：把远程流挂到某个 video ----
-// remoteVideos.value[0]!.srcObject = remoteStream
-// usernameEls.value[0]!.textContent = 'Tom'
-// localVideoRef.value!.srcObject = localStream
 </script>
 
 <style scoped>
