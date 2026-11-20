@@ -5,7 +5,7 @@ const logger: Logger = getLogger();
 
 export async function getWorker(workers: Worker[]): Promise<Worker> {
   if (workers.length === 0) {
-    throw new Error('getWorker: 没有 worker')
+    throw new Error('getWorker(): 没有 worker')
   }
   if (workers.length === 1)  {
     return workers[0]

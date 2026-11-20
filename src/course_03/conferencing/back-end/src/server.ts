@@ -51,7 +51,10 @@ io.on('connect', socket => {
 
   logger.info(`socket id(${socket.id}) 已连接服务器`)
 
-  let client: Client;
+  // ---- 连接闭包对象 ----
+  let client: Client;  // socket 对应的 用户
+
+  // 处理加入房间请求
   socket.on(CLIENT_REQ.JOIN_ROOM, async ({roomName, userName}, ack) => {
     client = new Client(userName, socket)
     let newRoom = false  // 是否是新的房间
@@ -73,9 +76,44 @@ io.on('connect', socket => {
     // socket 加入房间
     socket.join(roomName)
     ack({
-      routerRtpCapabilities: client.room.router?.rtpCapabilities,
+      routerRtpCapabilities: client.room.router!.rtpCapabilities,
       newRoom
     })
+  })
+
+  // 处理创建传输请求, consumer & producer
+  socket.on(CLIENT_REQ.CREATE_TRANSPORT, async ({type}, ack)=> {
+    let clientTransportParams = null
+    if (type === 'producer') {
+      clientTransportParams = await client.addTransport(type)
+    } else if (type === 'consumer') {
+
+    }
+    ack(clientTransportParams)
+  })
+
+  socket.on(CLIENT_REQ.CONNECT_TRANSPORT, async ({dtlsParameters, type}, ack) => {
+    if (type === 'producer') {
+      try {
+        await client.upstreamTransport!.connect({dtlsParameters})
+        ack("success")
+      } catch (err) {
+        console.log(err)
+        ack("error")
+      }
+    }
+  })
+
+  socket.on(CLIENT_REQ.START_PRODUCE, async({kind, rtpParameters}, ack) => {
+    try {
+      const newProducer = await client.upstreamTransport!.produce({kind, rtpParameters})
+      ack(newProducer.id)
+    } catch (err) {
+      console.log(err)
+      ack("error")
+    }
+    // TODO 1 audio track 需要加入正在通话显示列表
+    // TODO 2 通知房间其他人需要接收
   })
 })
 

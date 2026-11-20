@@ -1,16 +1,20 @@
-import type { RouterRtpCodecCapability } from 'mediasoup/types'
+import type { RouterRtpCodecCapability, TransportListenInfo } from 'mediasoup/types'
 
 export interface AppConfig {
   ip: string
   port: number
   routerMediaCodecs: RouterRtpCodecCapability[]
+  listenInfos: TransportListenInfo[]
+  maxIncomingBitrate: number
+  initialAvailableOutgoingBitrate: number
 }
 
 // 全局配置
 export const config: AppConfig = {
-  ip: '127.0.0.1',
+  ip: '192.168.0.19',
   port: 3031,
 
+  // 创建 router 相关配置
   routerMediaCodecs: [
     {
       kind: 'audio',
@@ -37,5 +41,21 @@ export const config: AppConfig = {
       },
     },
   ],
+
+  // 创建 transport 相关配置
+  listenInfos: [
+    {
+      protocol: 'udp',
+      ip: '0.0.0.0',
+      announcedAddress: '192.168.0.19'
+    },
+    {
+      protocol: 'tcp',
+      ip: '0.0.0.0',
+      announcedAddress: '192.168.0.19'
+    }
+  ],
+  maxIncomingBitrate: 5_000_000,                 // 最大推流带宽
+  initialAvailableOutgoingBitrate: 5_000_000     // 初始带宽
 }
 

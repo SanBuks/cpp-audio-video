@@ -1,11 +1,9 @@
 // 客户端请求消息
 export const CLIENT_REQ = {
-  JOIN_ROOM: 'join-room',
-  LEAVE_ROOM: 'leave-room',
-  CREATE_WEBRTC_TRANSPORT: 'create-webrtc-transport',
-  CONNECT_WEBRTC_TRANSPORT: 'connect-webrtc-transport',
-  PRODUCE: 'produce',
-  CONSUME: 'consume',
+  JOIN_ROOM: 'join-room',                 // 加入房间
+  CREATE_TRANSPORT: 'create-transport',   // 创建传输 producer / consumer
+  CONNECT_TRANSPORT: 'connect-transport', // 连接传输 producer / consumer
+  START_PRODUCE: 'start-producing',      // 开始 produce
 } as const
 
 // 服务器回应消息

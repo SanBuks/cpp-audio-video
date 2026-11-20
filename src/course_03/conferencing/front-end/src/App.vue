@@ -1,23 +1,23 @@
 <template>
-  <div class="room-container">
-    <!-- Room 信息区 -->
+  <div class="base-container">
+    <!-- 房间信息区 -->
     <div class="room-info">
-      <span class="room-label">Room:</span>
-      <el-input v-model="roomName" placeholder="Room Name" class="room-input" />
-      <span class="room-label">User:</span>
+      <span class="room-label">房间:</span>
+      <el-input v-model="roomName" placeholder="101" class="room-input" />
+      <span class="room-label">用户名:</span>
       <el-input v-model="userName" class="user-input" />
-      <el-button type="primary" @click="onJoin">Join</el-button>
+      <el-button type="primary" @click="onJoin">加入房间</el-button>
     </div>
 
-    <!-- 通话控制按钮：用 v-show 控制显隐 -->
-    <div v-show="joined" class="control-buttons">
-      <el-button type="primary" @click="onEnableFeed">Feed On</el-button>
-      <el-button type="success" :disabled="!feedReady" @click="onSendFeed">Send Feed</el-button>
-      <el-button type="success" :disabled="!joined" @click="onToggleMute">Audio On</el-button>
-      <el-button type="danger" :disabled="!joined" @click="onHangUp">Hangup</el-button>
+    <!-- 通话控制按钮 -->
+    <div class="control-buttons">
+      <el-button type="primary" :disabled="!openFeedStatus" @click="onEnableFeed">打开本地流</el-button>
+      <el-button type="success" :disabled="!sendFeedStatus" @click="onSendFeed">发布本地流</el-button>
+      <el-button type="success" :disabled="!toggleStatus" @click="onToggleMute">打开音频</el-button>
+      <el-button type="danger" :disabled="!hangupStatus" @click="onHangUp">挂断</el-button>
     </div>
 
-    <!-- 顶部小视频（非主导说话者） -->
+    <!-- 顶部小视频(非主导说话者) -->
     <div class="remote-media">
       <div class="remote-video-container remote-speaker">
         <video ref="remoteVideo1" class="remote-video" autoplay inline controls></video>
@@ -47,7 +47,7 @@
 
     <!-- 本地视频（左下角） -->
     <div class="local-media">
-      <video ref="localVideoRef" class="local-video" muted autoplay inline></video>
+      <video ref="localVideo" class="local-video" muted autoplay inline></video>
     </div>
   </div>
 </template>
@@ -56,15 +56,19 @@
 import { onMounted, ref } from 'vue'
 import { io, Socket } from 'socket.io-client'
 import { Device } from 'mediasoup-client'
-import { MSG_JOIN_ROOM } from '@/constant/signaling-msg'
+import type { Producer, Transport } from 'mediasoup-client/types'
+import { CLIENT_REQ } from '@/constant/signaling-msg'
+import { createProducerTransport, createProducer } from '@/util/conf-util.ts'
 
 // import getMic2 from './getMic2'
-// import createProducerTransport from './mediaSoupFunctions/createProducerTransport'
-// import createProducer from './mediaSoupFunctions/createProducer'
 // import requestTransportToConsume from './mediaSoupFunctions/requestTransportToConsume'
 
 let socket: Socket
 let device: Device
+let localStream: MediaStream // 本地媒体流
+let producerTransport: Transport // 推流-传输对象
+let videoProducer: Producer
+let audioProducer: Producer
 
 onMounted(() => {
   socket = io('https://localhost:3031')
@@ -76,12 +80,12 @@ onMounted(() => {
 const roomName = ref('')
 const userName = ref('')
 
-const joined = ref(false)    // 替代原 d-none 的显隐控制
-const feedReady = ref(false) // 替代 "send-feed" 按钮的 disabled 状态
+const openFeedStatus = ref(false)
+const sendFeedStatus = ref(false)
+const toggleStatus = ref(false)
+const hangupStatus = ref(false)
 
-// ---- 视频 / 用户名元素引用 ----
-const localVideoRef = ref<HTMLVideoElement | null>(null)
-
+const localVideo = ref<HTMLVideoElement>()
 const remoteVideo0 = ref<(HTMLVideoElement | null)[]>([])
 const remoteVideo1 = ref<(HTMLVideoElement | null)[]>([])
 const remoteVideo2 = ref<(HTMLVideoElement | null)[]>([])
@@ -89,36 +93,56 @@ const remoteVideo3 = ref<(HTMLVideoElement | null)[]>([])
 const remoteVideo4 = ref<(HTMLVideoElement | null)[]>([])
 
 const username0 = ref<(HTMLElement | null)[]>([])
-const username1= ref<(HTMLElement | null)[]>([])
-const username2= ref<(HTMLElement | null)[]>([])
-const username3= ref<(HTMLElement | null)[]>([])
-const username4= ref<(HTMLElement | null)[]>([])
+const username1 = ref<(HTMLElement | null)[]>([])
+const username2 = ref<(HTMLElement | null)[]>([])
+const username3 = ref<(HTMLElement | null)[]>([])
+const username4 = ref<(HTMLElement | null)[]>([])
 
 const onJoin = async () => {
-  const resp = await socket.emitWithAck(MSG_JOIN_ROOM, {
+  const resp = await socket.emitWithAck(CLIENT_REQ.JOIN_ROOM, {
     roomName: roomName.value,
     userName: userName.value,
   })
-  console.log(resp)
   device = new Device()
   await device.load({
     routerRtpCapabilities: resp.routerRtpCapabilities,
   })
-  console.log(device)
-  joined.value = true
+  openFeedStatus.value = true
 }
 
-const onEnableFeed = () => {}
-const onSendFeed = () => {}
-const onToggleMute = () => {}
+const onEnableFeed = async () => {
+  localStream = await navigator.mediaDevices.getUserMedia({
+    audio: true,
+    video: true,
+  })
+  localVideo.value!.srcObject = localStream
+  openFeedStatus.value = false
+  sendFeedStatus.value = true
+}
+
+const onSendFeed = async () => {
+  producerTransport = await createProducerTransport(socket, device)
+  const producer = await createProducer(localStream, producerTransport)
+  videoProducer = producer.videoProducer
+  audioProducer = producer.audioProducer
+
+  sendFeedStatus.value = false
+  toggleStatus.value = true
+  hangupStatus.value = true
+}
+
+const onToggleMute = () => {
+
+}
+
 const onHangUp = () => {
-  joined.value = false
+  hangupStatus.value = false
 }
 </script>
 
 <style scoped>
-/* 容器，替代 Bootstrap 的 .container */
-.room-container {
+/* 基础容器 */
+.base-container {
   max-width: 1140px;
   margin: 0 auto;
   padding: 16px;
