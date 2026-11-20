@@ -1,4 +1,5 @@
-import { CLIENT_REQ, CLIENT_ANS } from '../constant/signaling-msg.js'
+import { CLIENT_REQ, CLIENT_ANS } from '@/constant/signaling-msg.js'
+import { Producer } from "mediasoup/types";
 
 type AckData<T = void> = {
   ok: boolean;
@@ -24,4 +25,9 @@ export interface InterServerEvents {}
 export interface SocketData {
   roomId?: string
   username?: string
+}
+
+export type ProducerPair = {
+  audio?: Producer
+  video?: Producer
 }

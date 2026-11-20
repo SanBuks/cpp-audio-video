@@ -2,7 +2,8 @@ import { Room } from "@/model/Room.js"
 import { config } from '@/config/config.js'
 import { Logger, getLogger } from '@/util/get-logger.js'
 import { Socket } from "socket.io";
-import { Transport } from "mediasoup/types";
+import { MediaKind, Producer, Transport } from "mediasoup/types";
+import { ProducerPair } from "@/type/common-type.js";
 
 const logger: Logger = getLogger();
 
@@ -13,14 +14,13 @@ export class Client {
 
   upstreamTransport: Transport | null = null
   downstreamTransport: Transport [] = []
-  producer: {}                // 两个部分 音频和视频
-  consumers: any[]            // 也分两个部分
+  producer: ProducerPair                      // 两个部分音频和视频
+  consumers: any[] = []                       // 两个部分音频和视频
 
   constructor(userName: string, socket: Socket) {
     this.userName = userName
     this.socket = socket
     this.producer = {}
-    this.consumers = []
   }
 
   async addTransport(type: string): Promise<any> {
@@ -52,14 +52,18 @@ export class Client {
     if (type === 'producer') {
       this.upstreamTransport = transport
     } else if (type === 'consumer') {
-
     }
 
-    return new Promise(resolve => {
-      resolve(clientTransportParams)
-    })
+    return clientTransportParams
   }
 
+  async addProducer(kind: MediaKind, producer: Producer) {
+    this.producer[kind] = producer
+    if (kind === 'audio') {
+      // 加入 监听
+      await this.room!.activeSpeakerObserver!.addProducer({producerId: producer.id})
+    }
+  }
 }
 
 

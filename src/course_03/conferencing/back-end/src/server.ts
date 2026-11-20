@@ -64,7 +64,7 @@ io.on('connect', socket => {
       // 找到消耗最小的子进程
       const workerToUse = await getWorker(workers)
       requestRoom  = new Room(roomName, workerToUse)
-      await requestRoom.createRouter()
+      await requestRoom.createRouter(socket)
       rooms.push(requestRoom)
     }
     // 加入房间
@@ -107,6 +107,7 @@ io.on('connect', socket => {
   socket.on(CLIENT_REQ.START_PRODUCE, async({kind, rtpParameters}, ack) => {
     try {
       const newProducer = await client.upstreamTransport!.produce({kind, rtpParameters})
+      await client.addProducer(kind, newProducer)
       ack(newProducer.id)
     } catch (err) {
       console.log(err)

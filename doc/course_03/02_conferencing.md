@@ -18,3 +18,6 @@
   - worker(1) - room(n)
   - router(1) - room(1)
 
+
+- ActiveSpeakerObserver
+- RTPObserver
