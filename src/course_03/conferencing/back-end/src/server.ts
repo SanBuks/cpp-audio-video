@@ -39,7 +39,7 @@ let socketIoConfig = {
     origin: [
       `https://127.0.0.1:3032`,
       `https://localhost:3032`,
-      `https://192.168.0.19:3032`,
+      `https://${import.meta.env.APP_SIGNALING_SERVER_IP}:${import.meta.env.APP_SIGNALING_SERVER_PORT}`,
     ],
   },
 }
@@ -148,6 +148,57 @@ io.on('connect', socket => {
       client?.producer?.audio?.pause()
     } else {
       client?.producer?.audio?.resume()
+    }
+  })
+
+  // consume media
+  socket.on(CLIENT_REQ.CONSUME_MEDIA, async({rtpCapabilities,pid, kind}, ack) => {
+    // video & audio
+    logger.info(`kind: ${kind}, pid: ${pid}`)
+
+    // 判断能不能 consume
+    // TODO 需要判断 Room-Client-Producer-kind-pid 是否存在, 有断开可能性
+    if (!client.room!.router!.canConsume({producerId: pid, rtpCapabilities})) {
+      ack("cannotConsume")
+      return
+    }
+
+    const downStreamTransport = client.downstreamTransports.find(
+        t => {
+          if (kind === 'audio') {
+            return t.associatedAudioPid === pid
+          } else if (kind === 'video') {
+            return t.associatedVideoPid === pid
+          } else {
+            return false
+          }
+        }
+    )
+    if (!downStreamTransport) {
+      logger.error(`pid ${pid}, kind ${kind} downstreamTransport 未找到`)
+      ack("cannotFindTransport")
+      return
+    }
+
+    try {
+      const newConsumer = await downStreamTransport.transport.consume({
+        producerId: pid,
+        rtpCapabilities,
+        paused: true,   // 最佳实践 paused
+      })
+
+      client.addConsumer(kind, newConsumer, downStreamTransport)
+
+      let consumerParams = {
+        id: newConsumer.id,
+        producerId: pid,
+        kind: newConsumer.kind,
+        rtpParameters: newConsumer.rtpParameters,
+      }
+      ack(consumerParams)
+    } catch (err) {
+      console.log(err)
+      ack("error")
     }
   })
 })

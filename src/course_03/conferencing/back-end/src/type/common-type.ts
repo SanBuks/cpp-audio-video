@@ -1,5 +1,5 @@
 import { CLIENT_REQ, CLIENT_ANS } from '@/constant/signaling-msg.js'
-import { Producer, RtpCapabilities, Transport } from "mediasoup/types";
+import {Consumer, Producer, RtpCapabilities, Transport} from "mediasoup/types";
 
 type AckData<T = void> = {
   ok: boolean;
@@ -37,6 +37,8 @@ export type DownStreamTransportType = {
   transport: Transport
   associatedAudioPid: string
   associatedVideoPid?: string
+  audio?: Consumer
+  video?: Consumer
 }
 
 // 定义 JOIN_ROOM 事件的 Ack 响应类型

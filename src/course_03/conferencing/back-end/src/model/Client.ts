@@ -1,5 +1,5 @@
 import { Socket } from "socket.io";
-import { MediaKind, Producer, Transport } from "mediasoup/types";
+import {Consumer, MediaKind, Producer, Transport} from "mediasoup/types";
 
 import { Room } from "@/model/Room.js"
 import { config } from '@/config/config.js'
@@ -15,7 +15,7 @@ export class Client {
   room: Room | null = null  // 参与的房间
 
   upstreamTransport: Transport | null = null
-  downstreamTransport: DownStreamTransportType [] = []
+  downstreamTransports: DownStreamTransportType [] = []
   producer: ProducerPair                      // 两个部分音频和视频
   consumers: any[] = []                       // 两个部分音频和视频
 
@@ -55,7 +55,7 @@ export class Client {
       this.upstreamTransport = transport
       // setInterval(()=>printStats(transport), 1000)
     } else if (type === 'consumer') {
-      this.downstreamTransport.push({
+      this.downstreamTransports.push({
         transport,
         associatedAudioPid: audioPid!, // audio 一定存在
         associatedVideoPid: videoPid,
@@ -71,6 +71,10 @@ export class Client {
       await this.room!.activeSpeakerObserver!.addProducer({producerId: producer.id})
     }
   }
+
+  addConsumer(kind: MediaKind, newConsumer: Consumer, downstreamTransport: DownStreamTransportType) {
+    downstreamTransport[kind] = newConsumer
+}
 }
 
 

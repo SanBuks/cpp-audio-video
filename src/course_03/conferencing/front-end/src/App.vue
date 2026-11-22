@@ -93,7 +93,8 @@ const username4 = ref<(HTMLElement | null)[]>([])
 
 // ---- hook ----
 onMounted(() => {
-  socket = io('https://localhost:3031')
+  const host = `https://${import.meta.env.APP_SIGNALING_SERVER_IP}:${import.meta.env.APP_SIGNALING_SERVER_PORT}`
+  socket = io(host)
   socket.on('connect', () => {
     console.log('connect')
   })
