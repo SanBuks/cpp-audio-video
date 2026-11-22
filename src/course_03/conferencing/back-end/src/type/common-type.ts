@@ -1,5 +1,5 @@
 import { CLIENT_REQ, CLIENT_ANS } from '@/constant/signaling-msg.js'
-import { Producer } from "mediasoup/types";
+import { Producer, RtpCapabilities, Transport } from "mediasoup/types";
 
 type AckData<T = void> = {
   ok: boolean;
@@ -30,4 +30,26 @@ export interface SocketData {
 export type ProducerPair = {
   audio?: Producer
   video?: Producer
+}
+
+// 拉流传输综合类
+export type DownStreamTransportType = {
+  transport: Transport
+  associatedAudioPid: string
+  associatedVideoPid?: string
+}
+
+// 定义 JOIN_ROOM 事件的 Ack 响应类型
+export interface JoinRoomResponse {
+  routerRtpCapabilities: RtpCapabilities;
+  newRoom: boolean;
+  audioPidsToCreate: string[];
+  videoPidsToCreate: (string | null) [];
+  associatedUserNames: (string | null) [];
+}
+
+// 定义加入房间的请求参数类型
+export interface JoinRoomRequest {
+  roomName: string;
+  userName: string;
 }

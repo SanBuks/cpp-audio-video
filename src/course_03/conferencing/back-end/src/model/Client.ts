@@ -1,9 +1,11 @@
-import { Room } from "@/model/Room.js"
-import { config } from '@/config/config.js'
-import { Logger, getLogger } from '@/util/get-logger.js'
 import { Socket } from "socket.io";
 import { MediaKind, Producer, Transport } from "mediasoup/types";
-import { ProducerPair } from "@/type/common-type.js";
+
+import { Room } from "@/model/Room.js"
+import { config } from '@/config/config.js'
+import { DownStreamTransportType, ProducerPair } from "@/type/common-type.js";
+import { Logger, getLogger } from '@/util/get-logger.js'
+import { printStats } from "@/util/print-stats.js";
 
 const logger: Logger = getLogger();
 
@@ -13,7 +15,7 @@ export class Client {
   room: Room | null = null  // 参与的房间
 
   upstreamTransport: Transport | null = null
-  downstreamTransport: Transport [] = []
+  downstreamTransport: DownStreamTransportType [] = []
   producer: ProducerPair                      // 两个部分音频和视频
   consumers: any[] = []                       // 两个部分音频和视频
 
@@ -23,13 +25,13 @@ export class Client {
     this.producer = {}
   }
 
-  async addTransport(type: string): Promise<any> {
+  async addTransport(type: string, audioPid?: string , videoPid?: string): Promise<any> {
     if (!this.room || !this.room.router) {
       throw new Error("addTransport(): room 或 router 不存在!")
     }
 
     // 获取配置
-    const {listenInfos, maxIncomingBitrate, initialAvailableOutgoingBitrate} = config
+    const { listenInfos, maxIncomingBitrate, initialAvailableOutgoingBitrate } = config
     // 创建 传输对象
     const transport = await this.room.router.createWebRtcTransport({
       enableUdp: true,
@@ -40,7 +42,7 @@ export class Client {
       initialAvailableOutgoingBitrate: initialAvailableOutgoingBitrate
     })
     // 打印 iceCandidates
-    logger.info(`(${this.socket.id}) Server ICE Candidates:`, transport.iceCandidates)
+    // logger.info(`(${this.socket.id}) Server ICE Candidates:`, transport.iceCandidates)
 
     const clientTransportParams = {
       id: transport.id,
@@ -51,9 +53,14 @@ export class Client {
 
     if (type === 'producer') {
       this.upstreamTransport = transport
+      // setInterval(()=>printStats(transport), 1000)
     } else if (type === 'consumer') {
+      this.downstreamTransport.push({
+        transport,
+        associatedAudioPid: audioPid!, // audio 一定存在
+        associatedVideoPid: videoPid,
+      })
     }
-
     return clientTransportParams
   }
 

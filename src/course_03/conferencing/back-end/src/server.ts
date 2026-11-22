@@ -13,6 +13,7 @@ import { Client } from "@/model/Client.js";
 import { Room } from "@/model/Room.js";
 import { createWorkers } from '@/util/create-workers.js'
 import { getWorker } from "@/util/get-worker.js";
+import { JoinRoomRequest, JoinRoomResponse } from "@/type/common-type.js";
 
 const app = express()
 const logger = log4js.configure(path.resolve(process.cwd(), 'log4js-config.json')).getLogger()
@@ -55,7 +56,10 @@ io.on('connect', socket => {
   let client: Client;  // socket 对应的 用户
 
   // 处理加入房间请求
-  socket.on(CLIENT_REQ.JOIN_ROOM, async ({roomName, userName}, ack) => {
+  socket.on(CLIENT_REQ.JOIN_ROOM, async (
+    { roomName, userName }: JoinRoomRequest,
+    ack: (response: JoinRoomResponse) => void
+  ) => {
     client = new Client(userName, socket)
     let newRoom = false  // 是否是新的房间
     let requestRoom = rooms.find(room => room.roomName === roomName)
@@ -70,28 +74,48 @@ io.on('connect', socket => {
     // 加入房间
     client.room = requestRoom
     client.room.addClient(client)
-
-    // TODO create producer, consumer
-
     // socket 加入房间
     socket.join(roomName)
+
+    // 获取前 5 个活跃 audio id
+    const audioPidsToCreate = client.room.activeSpeakerList.slice(0, 5)
+    // 获取对应的 5 个 video id
+    const videoPidsToCreate = audioPidsToCreate.map((audioId) => {
+      const findClient = client.room?.clients.find(c => c?.producer?.audio?.id === audioId)
+      const returnId = findClient?.producer?.video?.id
+      return returnId ? returnId : null
+    })
+    // 获取对应的 5 个 client user name
+    const associatedUserNames = audioPidsToCreate.map((audioId) => {
+      const findClient = client.room?.clients.find(c => c?.producer?.audio?.id === audioId)
+      const returnName = findClient?.userName
+      return returnName ? returnName : null
+    })
+
     ack({
       routerRtpCapabilities: client.room.router!.rtpCapabilities,
-      newRoom
+      newRoom,
+      audioPidsToCreate,
+      videoPidsToCreate,
+      associatedUserNames,
     })
   })
 
   // 处理创建传输请求, consumer & producer
-  socket.on(CLIENT_REQ.CREATE_TRANSPORT, async ({type}, ack)=> {
+  socket.on(CLIENT_REQ.CREATE_TRANSPORT, async ({type, audioPid}, ack)=> {
     let clientTransportParams = null
     if (type === 'producer') {
       clientTransportParams = await client.addTransport(type)
     } else if (type === 'consumer') {
-
+      // 从房间中查找 audioPid 对应的 客户端, 创建一个 transport, 每个 transport 中含有 video-producer / audio-producer
+      const producingClient = client.room?.clients.find(c => c?.producer?.audio?.id === audioPid)
+      const videoPid = producingClient?.producer?.video?.id
+      clientTransportParams = await client.addTransport(type, audioPid, videoPid)
     }
     ack(clientTransportParams)
   })
 
+  // 处理传输连接请求, consumer & producer
   socket.on(CLIENT_REQ.CONNECT_TRANSPORT, async ({dtlsParameters, type}, ack) => {
     if (type === 'producer') {
       try {
@@ -104,6 +128,7 @@ io.on('connect', socket => {
     }
   })
 
+  // produce, consume
   socket.on(CLIENT_REQ.START_PRODUCE, async({kind, rtpParameters}, ack) => {
     try {
       const newProducer = await client.upstreamTransport!.produce({kind, rtpParameters})
@@ -115,6 +140,15 @@ io.on('connect', socket => {
     }
     // TODO 1 audio track 需要加入正在通话显示列表
     // TODO 2 通知房间其他人需要接收
+  })
+
+  // 处理关闭, 打开音频
+  socket.on(CLIENT_REQ.AUDIO_CHANGE, async ({type}) => {
+    if (type === 'mute') {
+      client?.producer?.audio?.pause()
+    } else {
+      client?.producer?.audio?.resume()
+    }
   })
 })
 

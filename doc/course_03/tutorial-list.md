@@ -1,8 +1,31 @@
-# 1 Intro
+# course
+## 1 Intro
+- 001 Introduction & Course Structure
+- 002 Class GitHub Repo
+- 003 Why do we need MediaSoup
+- 004 What Can MediaSoup Do Why An SFU
+- 006 Whiteboard a MediaSoup Call
+- 007 My Development SetupHow I Do Node
 
-# 2 Basic
+## 2 Basic
+- 008 Project 1 Demo
+- 009 Build our server, express, socket.io, https
+- 010 createWorkers, initMediaSoup, and config
+- 011 Create Router (wMediaCodecs)
+- 012 Front-End Starter Files
+- 013 Init Connection to Server
+- 014 Create and Load Device
+- 015 Transport - Whiteboard Explanation
+- 016 Create Server Producer Transport (and Transport Docs)
+- 017 Create Client Producer Transport
+- 018 Connect Producer Transport And Produce
+- 019 Create Consumer Transport
+- 020 Consume!
+- 021 Debugging and Troubleshooting Your Connection
+- 022 Loading On Another Device
+- 023 Close connection - lots of options!
 
-# 3 Conferencing
+## 3 Conferencing
 - 024 Demo
 - 025 Front-end Setup With Vite
 - 026 Add Front-End Markup
@@ -30,3 +53,7 @@
 - 048 Handle activeSpeaker changes - mute
 - 049 Handle activeSpeakers changes - resume, create
 - 050 Front-end - New Active Speaker
+
+# repo
+- 服务端录制 mediasoup3-record-demo `https://github.com/ethand91/mediasoup3-record-demo`
+- 

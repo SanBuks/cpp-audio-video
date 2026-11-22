@@ -13,7 +13,7 @@
     <div class="control-buttons">
       <el-button type="primary" :disabled="!openFeedStatus" @click="onEnableFeed">打开本地流</el-button>
       <el-button type="success" :disabled="!sendFeedStatus" @click="onSendFeed">发布本地流</el-button>
-      <el-button type="success" :disabled="!toggleStatus" @click="onToggleMute">打开音频</el-button>
+      <el-button :type="muteButtonType" :disabled="!toggleStatus" @click="onToggleMute">{{ muteText }}</el-button>
       <el-button type="danger" :disabled="!hangupStatus" @click="onHangUp">挂断</el-button>
     </div>
 
@@ -53,16 +53,15 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { io, Socket } from 'socket.io-client'
 import { Device } from 'mediasoup-client'
 import type { Producer, Transport } from 'mediasoup-client/types'
 import { CLIENT_REQ } from '@/constant/signaling-msg'
-import { createProducerTransport, createProducer } from '@/util/conf-util.ts'
+import { createProducerTransport, createProducer, requestTransportToConsume } from '@/util/conf-util.ts'
+import type { JoinRoomRequest, JoinRoomResponse } from '@/type/conf-type.ts'
 
-// import getMic2 from './getMic2'
-// import requestTransportToConsume from './mediaSoupFunctions/requestTransportToConsume'
-
+// ---- var ----
 let socket: Socket
 let device: Device
 let localStream: MediaStream // 本地媒体流
@@ -70,15 +69,9 @@ let producerTransport: Transport // 推流-传输对象
 let videoProducer: Producer
 let audioProducer: Producer
 
-onMounted(() => {
-  socket = io('https://localhost:3031')
-  socket.on('connect', () => {
-    console.log('connect')
-  })
-})
-
-const roomName = ref('')
-const userName = ref('')
+const roomName = ref('') // 房间名
+const userName = ref('') // 用户名
+const isMuted = ref(false) // 是否静音
 
 const openFeedStatus = ref(false)
 const sendFeedStatus = ref(false)
@@ -98,15 +91,31 @@ const username2 = ref<(HTMLElement | null)[]>([])
 const username3 = ref<(HTMLElement | null)[]>([])
 const username4 = ref<(HTMLElement | null)[]>([])
 
-const onJoin = async () => {
-  const resp = await socket.emitWithAck(CLIENT_REQ.JOIN_ROOM, {
-    roomName: roomName.value,
-    userName: userName.value,
+// ---- hook ----
+onMounted(() => {
+  socket = io('https://localhost:3031')
+  socket.on('connect', () => {
+    console.log('connect')
   })
+})
+
+// ---- method ----
+const onJoin = async () => {
+  const req: JoinRoomRequest =  {
+    roomName: roomName.value,
+    userName: userName.value
+  }
+  const resp: JoinRoomResponse = await socket.emitWithAck(CLIENT_REQ.JOIN_ROOM, req)
+  // 创建设备对象, 加载网络协商能力
   device = new Device()
   await device.load({
     routerRtpCapabilities: resp.routerRtpCapabilities,
   })
+
+  console.log(resp)
+
+  // 创建 consumer transport 前 5 个
+  await requestTransportToConsume(resp, socket, device)
   openFeedStatus.value = true
 }
 
@@ -132,12 +141,22 @@ const onSendFeed = async () => {
 }
 
 const onToggleMute = () => {
-
+  if (audioProducer.paused) {
+    audioProducer.resume()
+    isMuted.value = false
+  } else {
+    audioProducer.pause()
+    isMuted.value = true
+  }
 }
 
 const onHangUp = () => {
   hangupStatus.value = false
 }
+
+// ---- computed ----
+const muteText = computed(() => (isMuted.value ? '开启音频' : '关闭音频'))
+const muteButtonType = computed(() => (isMuted.value ? 'danger' : 'success'))
 </script>
 
 <style scoped>
