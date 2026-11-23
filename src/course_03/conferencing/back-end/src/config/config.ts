@@ -11,8 +11,8 @@ export interface AppConfig {
 
 // 全局配置
 export const config: AppConfig = {
-  ip: import.meta.env.APP_SIGNALING_SERVER_IP,
-  port: import.meta.env.APP_SIGNALING_SERVER_PORT,
+  ip: process.env.APP_SIGNALING_SERVER_IP,
+  port: process.env.APP_SIGNALING_SERVER_PORT,
 
   // 创建 router 相关配置
   routerMediaCodecs: [
@@ -47,12 +47,12 @@ export const config: AppConfig = {
     {
       protocol: 'udp',
       ip: '0.0.0.0',
-      announcedAddress: import.meta.env.APP_SIGNALING_SERVER_IP,
+      announcedAddress: process.env.APP_SIGNALING_SERVER_IP,
     },
     {
       protocol: 'tcp',
       ip: '0.0.0.0',
-      announcedAddress: import.meta.env.APP_SIGNALING_SERVER_IP,
+      announcedAddress: process.env.APP_SIGNALING_SERVER_IP,
     }
   ],
   maxIncomingBitrate: 5_000_000,                 // 最大推流带宽

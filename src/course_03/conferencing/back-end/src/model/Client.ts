@@ -17,7 +17,7 @@ export class Client {
   upstreamTransport: Transport | null = null
   downstreamTransports: DownStreamTransportType [] = []
   producer: ProducerPair                      // 两个部分音频和视频
-  consumers: any[] = []                       // 两个部分音频和视频
+  // consumers: any[] = []                    // 两个部分音频和视频, 放入 downstreamTransports 对象中
 
   constructor(userName: string, socket: Socket) {
     this.userName = userName

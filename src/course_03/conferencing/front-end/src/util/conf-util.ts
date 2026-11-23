@@ -1,8 +1,9 @@
 import { Socket } from 'socket.io-client'
 import { CLIENT_REQ } from '@/constant/signaling-msg.ts'
 import type { Device } from 'mediasoup-client'
-import type { Producer, Transport } from 'mediasoup-client/types'
-import type { JoinRoomResponse } from "@/type/conf-type.ts";
+import type { Consumer, Producer, Transport } from 'mediasoup-client/types'
+import type { ClientConsumers, JoinRoomResponse } from '@/type/conf-type.ts'
+import type { Ref } from 'vue'
 
 // 会议系统工具类
 
@@ -44,23 +45,35 @@ export async function createProducerTransport(
 }
 
 // 创建 consumer transport
-export async function createConsumerTransport(
+export function createConsumerTransport(
   transportParams: any,
   device: Device,
   socket: Socket,
   audioPid: string
-): Promise<Transport> {
+): Transport {
 
   const consumerTransport = device.createRecvTransport(transportParams)
-  consumerTransport.on("connectionstatechange", state => {
-    console.log(" === connectionstatechange - ", state)
-  })
-  consumerTransport.on("icegatheringstatechange", state => {
-    console.log(" === icegatheringstatechange - ", state)
-  })
+  // consumerTransport.on("connectionstatechange", state => {
+  //   console.log(" === connectionstatechange - ", state)
+  // })
+  // consumerTransport.on("icegatheringstatechange", state => {
+  //   console.log(" === icegatheringstatechange - ", state)
+  // })
 
-  consumerTransport.on('connect', ({dtlsParameters}, callback, errback) => {
+  consumerTransport.on('connect', async ({dtlsParameters}, callback, errback) => {
     console.log('consumer transport connect event fired')
+    const resp = await socket.emitWithAck(CLIENT_REQ.CONNECT_TRANSPORT, {
+      dtlsParameters,
+      type: 'consumer',
+      audioPid,
+    })
+    console.log('consumer transport connect resp ', resp)
+    if (resp === 'success') {
+      callback()
+    } else {
+      console.log('consumer transport connect error', resp)
+      errback(new Error('consumer transport connect error', resp))
+    }
   })
 
   return consumerTransport
@@ -97,14 +110,30 @@ export async function createConsumer(
   socket: Socket,
   kind: string,
   slot: number
-): Promise<void> {
+): Promise<Consumer> {
 
   const consumerParams = await socket.emitWithAck(CLIENT_REQ.CONSUME_MEDIA, {
     rtpCapabilities: device.recvRtpCapabilities,
     pid,
     kind
   })
-  console.log(consumerParams)
+  if (consumerParams === 'cannotConsume') {
+    console.log('createProducer(): cannotConsume')
+    throw Error('createProducer(): cannotConsume')
+  } else if (consumerParams === 'cannotFindTransport') {
+    console.log('createProducer(): cannotFindTransport')
+    throw Error('createProducer(): cannotFindTransport')
+  } else if (consumerParams === 'error') {
+    console.log('createProducer(): error')
+    throw Error('createProducer(): error')
+  }
+  const consumer = await transport.consume(consumerParams)
+  const resp = await socket.emitWithAck(CLIENT_REQ.CONSUME_UNPAUSE, {pid, kind})
+  if (resp !== 'success') {
+    console.log('consume unpause request error: ', resp)
+    throw Error('consume unpause request error')
+  }
+  return consumer
 }
 
 // 周期打印收发包信息
@@ -134,11 +163,16 @@ export async function printStats(transport: Transport) {
  * @param consumeData 拉流所需的参数
  * @param socket Socket.IO
  * @param device Device 实例
+ * @param remoteVideos 远程视频控件
+ * @param consumers 客户端 consumer audioPid 映射
  */
 export async function requestTransportToConsume(
   consumeData: JoinRoomResponse,
   socket: Socket,
-  device: Device) : Promise<void> {
+  device: Device,
+  remoteVideos: Ref<(HTMLVideoElement | null)[], (HTMLVideoElement | null)[]>,
+  consumers: ClientConsumers
+) : Promise<void> {
 
   for (const audioPid of consumeData.audioPidsToCreate) {
     const idx = consumeData.audioPidsToCreate.indexOf(audioPid);
@@ -146,13 +180,28 @@ export async function requestTransportToConsume(
     if (!videoPid) continue;
     const consumeTransportParams = await socket.emitWithAck(CLIENT_REQ.CREATE_TRANSPORT, { type: 'consumer', audioPid })
     console.log(consumeTransportParams)
-    const consumerTransport = await createConsumerTransport(consumeTransportParams, device, socket, audioPid)
+    const consumerTransport = createConsumerTransport(consumeTransportParams, device, socket, audioPid)
     const [audioConsumer, videoConsumer] = await Promise.all([
       createConsumer(consumerTransport,  audioPid, device, socket, 'audio', idx),
       createConsumer(consumerTransport,  videoPid, device, socket, 'video', idx),
     ])
     console.log(audioConsumer)
     console.log(videoConsumer)
+    // 创建 MediaStream
+    const combinedStream = new MediaStream([audioConsumer?.track, videoConsumer?.track])
+    const videoCtl = remoteVideos.value[idx]
+    if (!videoCtl) {
+      console.log('requestTransportToConsume(): videoCtl 不存在!')
+      return
+    }
+    videoCtl.srcObject = combinedStream
+    consumers.set(audioPid,  {
+      combinedStream,
+      userName: consumeData.associatedUserNames[idx] ?? '',
+      consumerTransport,
+      audioConsumer,
+      videoConsumer
+    })
   }
 }
 

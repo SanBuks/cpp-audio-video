@@ -5,7 +5,8 @@ export const CLIENT_REQ = {
   CONNECT_TRANSPORT: 'connect-transport', // 连接传输 producer / consumer
   START_PRODUCE: 'start-producing',       // 开始 produce
   AUDIO_CHANGE: 'audio-change',           // 音频状态改变
-  CONSUME_MEDIA: 'consume-media'          // 创建 consumer
+  CONSUME_MEDIA: 'consume-media',         // 创建 consumer
+  CONSUME_UNPAUSE: 'consume-unpause',     // 恢复 consume
 } as const
 
 // 服务器回应消息

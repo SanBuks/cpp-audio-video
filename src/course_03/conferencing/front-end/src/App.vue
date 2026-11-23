@@ -19,29 +19,16 @@
 
     <!-- 顶部小视频(非主导说话者) -->
     <div class="remote-media">
-      <div class="remote-video-container remote-speaker">
-        <video ref="remoteVideo1" class="remote-video" autoplay inline controls></video>
-        <div ref="username1" class="username"></div>
-      </div>
-      <div class="remote-video-container">
-        <video ref="remoteVideo2" class="remote-video" autoplay inline controls></video>
-        <div ref="username2" class="username"></div>
-      </div>
-      <div class="remote-video-container">
-        <video ref="remoteVideo3" class="remote-video" autoplay inline controls></video>
-        <div ref="username3" class="username"></div>
-      </div>
-      <div class="remote-video-container">
-        <video ref="remoteVideo4" class="remote-video" autoplay inline controls></video>
-        <div ref="username4" class="username"></div>
+      <div class="remote-video-container" v-for="slot in SUB_SLOT_INDEXS" :key="slot">
+        <video :ref="setVideoRef(slot)" class="remote-video" autoplay inline controls />
+        <div :ref="setUserNameRef(slot)" class="username" />
       </div>
     </div>
-
     <!-- 当前说话者大视频 -->
     <div class="current-speaker">
       <div class="current-video-container">
-        <video ref="remoteVideo0" class="remote-video" autoplay inline controls></video>
-        <div ref="username0" class="username"></div>
+        <video :ref="setVideoRef(MAIN_SLOT_INDEX)" class="remote-video" autoplay inline controls />
+        <div :ref="setUserNameRef(MAIN_SLOT_INDEX)" class="username" />
       </div>
     </div>
 
@@ -59,7 +46,7 @@ import { Device } from 'mediasoup-client'
 import type { Producer, Transport } from 'mediasoup-client/types'
 import { CLIENT_REQ } from '@/constant/signaling-msg'
 import { createProducerTransport, createProducer, requestTransportToConsume } from '@/util/conf-util.ts'
-import type { JoinRoomRequest, JoinRoomResponse } from '@/type/conf-type.ts'
+import type { ClientConsumers, JoinRoomRequest, JoinRoomResponse } from '@/type/conf-type.ts'
 
 // ---- var ----
 let socket: Socket
@@ -68,6 +55,7 @@ let localStream: MediaStream // 本地媒体流
 let producerTransport: Transport // 推流-传输对象
 let videoProducer: Producer
 let audioProducer: Producer
+const consumers: ClientConsumers = new Map()
 
 const roomName = ref('') // 房间名
 const userName = ref('') // 用户名
@@ -78,22 +66,17 @@ const sendFeedStatus = ref(false)
 const toggleStatus = ref(false)
 const hangupStatus = ref(false)
 
-const localVideo = ref<HTMLVideoElement>()
-const remoteVideo0 = ref<(HTMLVideoElement | null)[]>([])
-const remoteVideo1 = ref<(HTMLVideoElement | null)[]>([])
-const remoteVideo2 = ref<(HTMLVideoElement | null)[]>([])
-const remoteVideo3 = ref<(HTMLVideoElement | null)[]>([])
-const remoteVideo4 = ref<(HTMLVideoElement | null)[]>([])
+const MAX_REMOTE_VIDEOS = 5 // 总远程画面数量
+const MAIN_SLOT_INDEX = 0 // 主讲人下标
+const SUB_SLOT_INDEXS = [1, 2, 3, 4] as const // 其他说话者下标
 
-const username0 = ref<(HTMLElement | null)[]>([])
-const username1 = ref<(HTMLElement | null)[]>([])
-const username2 = ref<(HTMLElement | null)[]>([])
-const username3 = ref<(HTMLElement | null)[]>([])
-const username4 = ref<(HTMLElement | null)[]>([])
+const localVideo = ref<HTMLVideoElement>()
+const remoteVideos = ref<(HTMLVideoElement | null)[]>(Array.from({ length: MAX_REMOTE_VIDEOS }, () => null))
+const usernames = ref<(HTMLElement | null)[]>(Array.from({ length: MAX_REMOTE_VIDEOS }, () => null))
 
 // ---- hook ----
 onMounted(() => {
-  const host = `https://${import.meta.env.APP_SIGNALING_SERVER_IP}:${import.meta.env.APP_SIGNALING_SERVER_PORT}`
+  const host = `https://${import.meta.env.VITE_APP_SIGNALING_SERVER_IP}:${import.meta.env.VITE_APP_SIGNALING_SERVER_PORT}`
   socket = io(host)
   socket.on('connect', () => {
     console.log('connect')
@@ -101,10 +84,21 @@ onMounted(() => {
 })
 
 // ---- method ----
+function setVideoRef(slot: number) {
+  return (el: unknown) => {
+    remoteVideos.value[slot] = el instanceof HTMLVideoElement ? el : null
+  }
+}
+function setUserNameRef(slot: number) {
+  return (el: unknown) => {
+    usernames.value[slot] = el instanceof HTMLElement ? el : null
+  }
+}
+
 const onJoin = async () => {
-  const req: JoinRoomRequest =  {
+  const req: JoinRoomRequest = {
     roomName: roomName.value,
-    userName: userName.value
+    userName: userName.value,
   }
   const resp: JoinRoomResponse = await socket.emitWithAck(CLIENT_REQ.JOIN_ROOM, req)
   // 创建设备对象, 加载网络协商能力
@@ -116,7 +110,8 @@ const onJoin = async () => {
   console.log(resp)
 
   // 创建 consumer transport 前 5 个
-  await requestTransportToConsume(resp, socket, device)
+  await requestTransportToConsume(resp, socket, device, remoteVideos, consumers)
+
   openFeedStatus.value = true
 }
 

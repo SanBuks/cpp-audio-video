@@ -1,9 +1,7 @@
-/// <reference types="vite/client" />
-interface ImportMetaEnv {
-  readonly APP_SIGNALING_SERVER_IP: string;
-  readonly APP_SIGNALING_SERVER_PORT: number;
-}
-
-interface ImportMeta {
-  readonly env: ImportMetaEnv;
+declare namespace NodeJS {
+  interface ProcessEnv {
+    APP_SIGNALING_SERVER_IP: string
+    APP_SIGNALING_SERVER_PORT: number
+    APP_SIGNALING_CLIENT_PORT: number
+  }
 }

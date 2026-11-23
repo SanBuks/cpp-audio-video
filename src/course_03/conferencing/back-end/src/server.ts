@@ -14,6 +14,7 @@ import { Room } from "@/model/Room.js";
 import { createWorkers } from '@/util/create-workers.js'
 import { getWorker } from "@/util/get-worker.js";
 import { JoinRoomRequest, JoinRoomResponse } from "@/type/common-type.js";
+import { updateActiveSpeakers } from "@/util/update-active-speakers.js";
 
 const app = express()
 const logger = log4js.configure(path.resolve(process.cwd(), 'log4js-config.json')).getLogger()
@@ -39,7 +40,7 @@ let socketIoConfig = {
     origin: [
       `https://127.0.0.1:3032`,
       `https://localhost:3032`,
-      `https://${import.meta.env.APP_SIGNALING_SERVER_IP}:${import.meta.env.APP_SIGNALING_SERVER_PORT}`,
+      `https://${process.env.APP_SIGNALING_SERVER_IP}:${process.env.APP_SIGNALING_CLIENT_PORT}`,
     ],
   },
 }
@@ -116,10 +117,21 @@ io.on('connect', socket => {
   })
 
   // 处理传输连接请求, consumer & producer
-  socket.on(CLIENT_REQ.CONNECT_TRANSPORT, async ({dtlsParameters, type}, ack) => {
+  socket.on(CLIENT_REQ.CONNECT_TRANSPORT, async ({dtlsParameters, type, audioPid}, ack) => {
     if (type === 'producer') {
       try {
         await client.upstreamTransport!.connect({dtlsParameters})
+        ack("success")
+      } catch (err) {
+        console.log(err)
+        ack("error")
+      }
+    } else if (type === 'consumer') {
+      try {
+        const downstreamTransport = client.downstreamTransports.find(
+          t => t.associatedAudioPid === audioPid
+        )
+        await downstreamTransport?.transport?.connect({dtlsParameters})
         ack("success")
       } catch (err) {
         console.log(err)
@@ -133,13 +145,18 @@ io.on('connect', socket => {
     try {
       const newProducer = await client.upstreamTransport!.produce({kind, rtpParameters})
       await client.addProducer(kind, newProducer)
+      if (kind === 'audio') {
+        // 新 produce 对象需要加入 最近发言人列表
+        client.room!.activeSpeakerList.push(newProducer.id)
+      }
       ack(newProducer.id)
     } catch (err) {
       console.log(err)
       ack("error")
     }
-    // TODO 1 audio track 需要加入正在通话显示列表
-    // TODO 2 通知房间其他人需要接收
+    // 通知房间其他人需要接收
+    const newTransportsByPeer = updateActiveSpeakers(client.room!, socket)
+
   })
 
   // 处理关闭, 打开音频
@@ -199,6 +216,34 @@ io.on('connect', socket => {
     } catch (err) {
       console.log(err)
       ack("error")
+    }
+  })
+
+  // consume unpause
+  socket.on(CLIENT_REQ.CONSUME_UNPAUSE, async({pid, kind}, ack) => {
+    const downStreamTransport = client.downstreamTransports.find(
+      t => {
+        if (kind === 'audio') {
+          return t.associatedAudioPid === pid
+        } else if (kind === 'video') {
+          return t.associatedVideoPid === pid
+        } else {
+          return false
+        }
+      }
+    )
+    if (!downStreamTransport) {
+      ack('cannotFindTransport')
+      return
+    }
+    if (kind === 'audio') {
+      await downStreamTransport.audio?.resume()
+      ack('success')
+      return
+    } else if (kind === 'video') {
+      await downStreamTransport.video?.resume()
+      ack('success')
+      return
     }
   })
 })

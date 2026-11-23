@@ -6,7 +6,8 @@
 # 5 
 - app 
   - mkcert, express, https, socket.io
-  - `npx mkcert create-cert` 
+  - `npx mkcert create-cert 192.168.0.21 localhost 127.0.0.1 ::1`
+  - `npx mkcert create-ca 192.168.0.21 localhost 127.0.0.1 ::1`
   - config, createWorkers, initMediasoup
   - mediasoup.createWorker() 参数
   - worker.on('died')

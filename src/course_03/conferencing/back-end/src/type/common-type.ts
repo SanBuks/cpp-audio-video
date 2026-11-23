@@ -34,11 +34,11 @@ export type ProducerPair = {
 
 // 拉流传输综合类
 export type DownStreamTransportType = {
-  transport: Transport
-  associatedAudioPid: string
+  transport: Transport        // transport 对象
+  associatedAudioPid: string  // 关联 audio pid
   associatedVideoPid?: string
-  audio?: Consumer
-  video?: Consumer
+  audio?: Consumer            //
+  video?: Consumer            //
 }
 
 // 定义 JOIN_ROOM 事件的 Ack 响应类型
