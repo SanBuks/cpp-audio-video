@@ -2,13 +2,12 @@ import fs from 'node:fs'
 import path from 'node:path'
 import https from 'node:https'
 import express from 'express'
-import * as mediasoup from 'mediasoup'
-import type { Worker, Router } from 'mediasoup/types'
+import type { Worker } from 'mediasoup/types'
 import { Server } from 'socket.io'
 import log4js from "log4js";
 
 import { config } from '@/config/config.js'
-import { CLIENT_REQ, CLIENT_ANS } from '@/constant/signaling-msg.js'
+import { CLIENT_REQ, SERVER_REQ } from '@/constant/signaling-msg.js'
 import { Client } from "@/model/Client.js";
 import { Room } from "@/model/Room.js";
 import { createWorkers } from '@/util/create-workers.js'
@@ -82,14 +81,14 @@ io.on('connect', socket => {
     const audioPidsToCreate = client.room.activeSpeakerList.slice(0, 5)
     // 获取对应的 5 个 video id
     const videoPidsToCreate = audioPidsToCreate.map((audioId) => {
-      const findClient = client.room?.clients.find(c => c?.producer?.audio?.id === audioId)
-      const returnId = findClient?.producer?.video?.id
+      const producerClient = client.room?.clients.find(c => c?.producer?.audio?.id === audioId)
+      const returnId = producerClient?.producer?.video?.id
       return returnId ? returnId : null
     })
     // 获取对应的 5 个 client user name
     const associatedUserNames = audioPidsToCreate.map((audioId) => {
-      const findClient = client.room?.clients.find(c => c?.producer?.audio?.id === audioId)
-      const returnName = findClient?.userName
+      const producerClient = client.room?.clients.find(c => c?.producer?.audio?.id === audioId)
+      const returnName = producerClient?.userName
       return returnName ? returnName : null
     })
 
@@ -155,8 +154,28 @@ io.on('connect', socket => {
       ack("error")
     }
     // 通知房间其他人需要接收
-    const newTransportsByPeer = updateActiveSpeakers(client.room!, socket)
-
+    const newTransportsByPeer = await updateActiveSpeakers(client.room!, socket)
+    // 找到 socket 发送 NEW_PRODUCER 消息
+    for (const [socketId, audioPidsToCreate] of newTransportsByPeer.entries()) {
+      console.log(socketId, audioPidsToCreate)
+      const videoPidsToCreate = audioPidsToCreate.map(aPid => {
+        const producerClient = client.room!.clients.find(c => c.producer?.audio?.id == aPid)
+        const returnId = producerClient?.producer?.video?.id
+        return returnId ? returnId : null
+      })
+      const associatedUserNames = audioPidsToCreate.map(aPid => {
+        const producerClient = client.room!.clients.find(c => c.producer?.audio?.id == aPid)
+        const returnName = producerClient?.userName
+        return returnName ? returnName : null
+      })
+      io.to(socketId).emit(SERVER_REQ.NEW_PRODUCER, {
+        routerRtpCapabilities: client.room!.router!.rtpCapabilities,
+        audioPidsToCreate,
+        videoPidsToCreate,
+        associatedUserNames,
+        activeSpeakerList: client.room!.activeSpeakerList.slice(0, 5)
+      })
+    }
   })
 
   // 处理关闭, 打开音频

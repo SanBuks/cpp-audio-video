@@ -10,10 +10,11 @@ export const CLIENT_REQ = {
 } as const
 
 // 服务器回应消息
-export const CLIENT_ANS = {
-  NEW_PRODUCER: 'new-producer'
+export const SERVER_REQ = {
+  NEW_PRODUCER: 'new-producer',                   // 新 consumer 需要客户端建立
+  UPDATE_ACTIVE_SPEAKER: 'update-active-speaker'  // 更新活跃发言人
 }
 
 export type ClientReqType = (typeof CLIENT_REQ)[keyof typeof CLIENT_REQ]
-export type ClientAnsType = (typeof CLIENT_ANS)[keyof typeof CLIENT_ANS]
+export type ServerReqType = (typeof SERVER_REQ)[keyof typeof SERVER_REQ]
 

@@ -31,7 +31,7 @@ export default defineConfig({
       cert: fs.readFileSync(path.resolve(import.meta.dirname, 'cert/cert.crt')),
       key: fs.readFileSync(path.resolve(import.meta.dirname, 'cert/cert.key')),
     },
-    host: '192.168.0.19',
+    host: '192.168.0.21',
     port: 3032,
   },
 })

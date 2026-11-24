@@ -61,13 +61,11 @@ export function createConsumerTransport(
   // })
 
   consumerTransport.on('connect', async ({dtlsParameters}, callback, errback) => {
-    console.log('consumer transport connect event fired')
     const resp = await socket.emitWithAck(CLIENT_REQ.CONNECT_TRANSPORT, {
       dtlsParameters,
       type: 'consumer',
       audioPid,
     })
-    console.log('consumer transport connect resp ', resp)
     if (resp === 'success') {
       callback()
     } else {
@@ -185,8 +183,6 @@ export async function requestTransportToConsume(
       createConsumer(consumerTransport,  audioPid, device, socket, 'audio', idx),
       createConsumer(consumerTransport,  videoPid, device, socket, 'video', idx),
     ])
-    console.log(audioConsumer)
-    console.log(videoConsumer)
     // 创建 MediaStream
     const combinedStream = new MediaStream([audioConsumer?.track, videoConsumer?.track])
     const videoCtl = remoteVideos.value[idx]

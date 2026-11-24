@@ -35,6 +35,7 @@
     <!-- 本地视频（左下角） -->
     <div class="local-media">
       <video ref="localVideo" class="local-video" muted autoplay inline></video>
+      <div class="username">{{ userName }}</div>
     </div>
   </div>
 </template>
@@ -44,7 +45,7 @@ import { computed, onMounted, ref } from 'vue'
 import { io, Socket } from 'socket.io-client'
 import { Device } from 'mediasoup-client'
 import type { Producer, Transport } from 'mediasoup-client/types'
-import { CLIENT_REQ } from '@/constant/signaling-msg'
+import { CLIENT_REQ, SERVER_REQ } from '@/constant/signaling-msg'
 import { createProducerTransport, createProducer, requestTransportToConsume } from '@/util/conf-util.ts'
 import type { ClientConsumers, JoinRoomRequest, JoinRoomResponse } from '@/type/conf-type.ts'
 
@@ -79,7 +80,35 @@ onMounted(() => {
   const host = `https://${import.meta.env.VITE_APP_SIGNALING_SERVER_IP}:${import.meta.env.VITE_APP_SIGNALING_SERVER_PORT}`
   socket = io(host)
   socket.on('connect', () => {
-    console.log('connect')
+    console.log(`[${socket.id}] connected`)
+  })
+
+  socket.on(SERVER_REQ.UPDATE_ACTIVE_SPEAKER, async (newListOfSpeakers) => {
+
+    // 清除流
+    remoteVideos.value.forEach((item) => { if (item) item.srcObject = null } )
+    usernames.value.forEach((item) => { if (item) item.innerHTML = '' })
+
+    let slot = 0
+    newListOfSpeakers.forEach((aid: string) => {
+      if (aid !== audioProducer?.id) {
+        const remoteVideoShow = remoteVideos.value[slot]
+        const usernameShow = usernames.value[slot]
+        const consumerDataShow = consumers.get(aid)
+
+        if (remoteVideoShow && consumerDataShow && consumerDataShow.combinedStream) {
+          remoteVideoShow.srcObject = consumerDataShow.combinedStream
+        }
+        if (usernameShow && consumerDataShow && consumerDataShow.userName) {
+          usernameShow.innerHTML = consumerDataShow.userName
+        }
+        ++slot
+      }
+    })
+  })
+
+  socket.on(SERVER_REQ.NEW_PRODUCER, async (consumeData) => {
+    await requestTransportToConsume(consumeData, socket, device, remoteVideos, consumers)
   })
 })
 

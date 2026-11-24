@@ -1,4 +1,4 @@
-import { CLIENT_REQ, CLIENT_ANS } from '@/constant/signaling-msg.js'
+import { CLIENT_REQ, SERVER_REQ} from '@/constant/signaling-msg.js'
 import {Consumer, Producer, RtpCapabilities, Transport} from "mediasoup/types";
 
 type AckData<T = void> = {
@@ -15,7 +15,6 @@ export interface ClientToServerEvents {
 
 // 服务器事件
 export interface ServerToClientEvents {
-  [CLIENT_ANS.NEW_PRODUCER] : (data: { producerId: string; username: string }) => void
 }
 
 // 服务器间事件
@@ -55,3 +54,6 @@ export interface JoinRoomRequest {
   roomName: string;
   userName: string;
 }
+
+// 新发言人集合 socket.id => new speakers producer id array
+export type NewTransportsByPeer = Map<string, string[]>
