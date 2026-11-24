@@ -58,8 +58,8 @@ let videoProducer: Producer
 let audioProducer: Producer
 const consumers: ClientConsumers = new Map()
 
-const roomName = ref('') // 房间名
-const userName = ref('') // 用户名
+const roomName = ref('101') // 房间名
+const userName = ref(generateReadableUsername()) // 用户名
 const isMuted = ref(false) // 是否静音
 
 const openFeedStatus = ref(false)
@@ -175,8 +175,27 @@ const onToggleMute = () => {
   }
 }
 
-const onHangUp = () => {
+const onHangUp = async () => {
+  const resp = await socket.emitWithAck(CLIENT_REQ.HANG_UP)
+  if(resp === "closeError"){
+    console.log("挂断失败")
+  }
+  producerTransport?.close()
+  for (const pair of consumers.entries()) {
+    pair[1].consumerTransport.close()
+  }
   hangupStatus.value = false
+}
+
+function generateReadableUsername() {
+  const adjectives = ['快乐', '聪明', '勇敢', '安静', '敏捷', '幸运', '温柔', '阳光', '神秘', '自由'];
+  const nouns = ['老虎', '雄鹰', '灰狼', '棕熊', '狐狸', '猫头鹰', '熊猫', '海豚', '麒麟', '锦鲤'];
+
+  const randomAdjective = adjectives[Math.floor(Math.random() * adjectives.length)];
+  const randomNoun = nouns[Math.floor(Math.random() * nouns.length)];
+  const randomNumber = Math.floor(Math.random() * 100);
+
+  return `${randomAdjective}的${randomNoun}${randomNumber}`;
 }
 
 // ---- computed ----
@@ -187,7 +206,7 @@ const muteButtonType = computed(() => (isMuted.value ? 'danger' : 'success'))
 <style scoped>
 /* 基础容器 */
 .base-container {
-  max-width: 1140px;
+  max-width: 1440px;
   margin: 0 auto;
   padding: 16px;
 }
@@ -213,10 +232,6 @@ const muteButtonType = computed(() => (isMuted.value ? 'danger' : 'success'))
   gap: 8px;
   margin: 12px 0;
 }
-/* 替代 Bootstrap 的 d-none；保留 class 方便 JS 通过 classList 切换 */
-.hidden {
-  display: none;
-}
 
 /* ---------- 顶部小视频行 ---------- */
 .remote-media {
@@ -228,17 +243,12 @@ const muteButtonType = computed(() => (isMuted.value ? 'danger' : 'success'))
 }
 .remote-video-container {
   position: relative;
-  width: 18%;
-  height: 80px;
+  width: 400px;
+  height: 200px;
   border: 1px solid var(--el-color-primary);
   border-radius: 4px;
   overflow: hidden;
   background: #000;
-}
-/* 第一个“非主导说话者”容器默认宽度可自行决定，这里跟随 18% */
-.remote-speaker {
-  width: 18%;
-  height: 80px;
 }
 .remote-video {
   width: 100%;
@@ -276,13 +286,14 @@ const muteButtonType = computed(() => (isMuted.value ? 'danger' : 'success'))
 
 /* ---------- 本地视频 ---------- */
 .local-media {
-  position: relative;
+  position: absolute;
+  right: 2px;
+  top: 2px;
   height: 150px;
 }
 .local-video {
   position: absolute;
-  left: 0;
-  top: 0;
+  right: 0;
   width: 200px;
   height: 150px;
   border: 1px solid var(--el-color-primary);

@@ -7,6 +7,7 @@ export const CLIENT_REQ = {
   AUDIO_CHANGE: 'audio-change',           // 音频状态改变
   CONSUME_MEDIA: 'consume-media',         // 创建 consumer
   CONSUME_UNPAUSE: 'consume-unpause',     // 恢复 consume
+  HANG_UP: 'hang-up'                      // 挂断
 } as const
 
 // 服务器请求信息

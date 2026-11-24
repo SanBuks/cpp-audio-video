@@ -265,6 +265,17 @@ io.on('connect', socket => {
       return
     }
   })
+
+  // hang up
+  socket.on(CLIENT_REQ.HANG_UP, async(ack) => {
+    try{
+      client.downstreamTransports?.forEach(t => t.transport.close())
+      client.upstreamTransport?.close()
+      ack("closed")
+    }catch(error){
+      ack("closeError")
+    }
+  })
 })
 
 // 启动流程, 先初始化 mediasoup, 再开始监听
